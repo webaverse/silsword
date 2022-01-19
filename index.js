@@ -38,7 +38,7 @@ const tempSwordTransform2 = _makeSwordTransform();
 const startSwordTransform = _makeSwordTransform();
 const lastSwordTransform = _makeSwordTransform();
 
-export default () => {
+export default e => {
   const app = useApp();
   const scene = useScene();
   const {renderer, camera, sceneLowPriority} = useInternals();
@@ -609,7 +609,7 @@ export default () => {
   }
 
   let subApp = null;
-  (async () => {
+  e.waitUntil((async () => {
     const u2 = baseUrl + 'megasword_v4_texta.glb';
     const m = await metaversefile.import(u2);
 
@@ -628,7 +628,7 @@ export default () => {
       subApp.setComponent(key, value);
     }
     await subApp.addModule(m);
-  })();
+  })());
 
   useActivate(() => {
     const localPlayer = useLocalPlayer();
