@@ -32,7 +32,7 @@
     {
       "key": "use",
       "value": {
-        "animation": [
+        "animationCombo": [
           "swordSideSlash",
           "swordSideSlashStep",
           "swordTopDownSlash",
