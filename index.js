@@ -616,6 +616,7 @@ export default e => {
     subApp = metaversefile.createApp({
       name: u2,
     });
+    subApp.name = 'silsword mesh';
     /* subApp.position.copy(app.position);
     subApp.quaternion.copy(app.quaternion);
     subApp.scale.copy(app.scale); */
