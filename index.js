@@ -691,6 +691,7 @@ export default e => {
   useCleanup(() => {
     trailMesh && sceneLowPriority.remove(trailMesh);
     decalMesh && scene.remove(decalMesh);
+    subApp && subApp.destroy();
   });
 
   app.getPhysicsObjects = () => {
