@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 // import Simplex from './simplex-noise.js';
 import metaversefile from 'metaversefile';
-const {useApp, useFrame, useScene, useInternals, useLocalPlayer, useActivate, useUse, useWear, usePhysics, getAppByPhysicsId, useCleanup} = metaversefile;
+const {useApp, useFrame, useScene, useInternals, useLocalPlayer, useActivate, useUse, useWear, usePhysics, getAppByPhysicsId, useCleanup, useSound} = metaversefile;
 
 const baseUrl = import.meta.url.replace(/(\/)[^\/\\]*$/, '$1');
 
@@ -43,6 +43,10 @@ export default e => {
   const scene = useScene();
   const {renderer, camera, sceneLowPriority} = useInternals();
   const physics = usePhysics();
+
+  const sounds = useSound();
+  const soundFiles = sounds.getSoundFiles();
+  const soundIndex=soundFiles.combat.map(sound => sound.name).indexOf('combat/sword_slash0-1.wav');
 
   const {components} = app;
 
@@ -610,7 +614,10 @@ export default e => {
 
   let subApp = null;
   e.waitUntil((async () => {
-    const u2 = baseUrl + 'megasword_v4_texta.glb';
+    let u2 = baseUrl + 'megasword_v4_texta.glb';
+    if (/^https?:/.test(u2)) {
+      u2 = '/@proxy/' + u2;
+    }
     const m = await metaversefile.import(u2);
 
     subApp = metaversefile.createApp({
@@ -660,7 +667,35 @@ export default e => {
     using = e.use;
   });
 
+  let animationOffset={
+    'swordSideSlash':350,
+    'swordSideSlashStep':150,
+    'swordTopDownSlash':100,
+    'swordTopDownSlashStep':150
+  }
+  let startAnimationTime=0;
+  let playSoundSw=false;
   useFrame(() => {
+    const localPlayer = useLocalPlayer();
+    if(localPlayer.avatar && wearing){
+      if(localPlayer.avatar.useAnimationIndex>=0){
+        if(startAnimationTime===0){
+          startAnimationTime=performance.now();
+        }
+        if(
+          performance.now()-startAnimationTime>=animationOffset[localPlayer.avatar.useAnimationCombo[localPlayer.avatar.useAnimationIndex]]
+          && !playSoundSw
+        ){
+          const indexOfSlash=localPlayer.avatar.useAnimationIndex;
+          sounds.playSound(soundFiles.combat[soundIndex+(4*indexOfSlash+Math.floor(Math.random()*4))]);
+          playSoundSw=true;
+        }
+      }
+      else{
+        playSoundSw=false;
+        startAnimationTime=0;
+      }
+    }
     /* if (!wearing) {
       if (subApp) {
         subApp.position.copy(app.position);
@@ -679,7 +714,7 @@ export default e => {
       trailMesh.update(using, subApp.matrixWorld);
     }
     if (decalMesh) {
-      const localPlayer = useLocalPlayer();
+      //const localPlayer = useLocalPlayer();
       if (subApp && localPlayer.avatar) {
         decalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
       }
