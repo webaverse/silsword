@@ -177,7 +177,7 @@ export default e => {
               scene.add(hitMesh);
             // } */
 
-            // if consqecutive hits are too far apart, treat them as separate hits
+            // if consecutive hits are too far apart, treat them as separate hits
             if (lastHitPoint && hitPoint.distanceTo(lastHitPoint.hitPoint) > 0.2) {
               lastHitPoint = null;
             }
