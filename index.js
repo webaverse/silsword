@@ -640,10 +640,10 @@ export default e => {
     await subApp.addModule(m);
   })());
 
-  useActivate(() => {
+  /* useActivate(() => {
     const localPlayer = useLocalPlayer();
     localPlayer.wear(app);
-  });
+  }); */
 
   let wearing = false;
   useWear(e => {
