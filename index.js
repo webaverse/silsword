@@ -70,6 +70,7 @@ export default e => {
     side: THREE.DoubleSide,
     // transparent: true,
   });
+  decalMaterial.freeze();
 
   // test the decal texture
   // const m = new THREE.Mesh(planeGeometry, decalMaterial);
@@ -500,6 +501,7 @@ export default e => {
         // depthWrite: false,
         transparent: true,
       });
+      material.freeze();
       
       super(geometry, material);
       this.frustumCulled = false;
