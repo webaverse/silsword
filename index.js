@@ -64,13 +64,13 @@ export default e => {
   const texture = new THREE.TextureLoader().load(baseUrl + 'chevron2.svg');
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  const decalMaterial = new THREE.MeshPhysicalMaterial({
+  const decalMaterial = new THREE.MeshBasicMaterial({
     color: 0xFF0000,
     map: texture,
     side: THREE.DoubleSide,
     // transparent: true,
   });
-  decalMaterial.freeze();
+  // decalMaterial.freeze();
 
   // test the decal texture
   // const m = new THREE.Mesh(planeGeometry, decalMaterial);
@@ -500,6 +500,10 @@ export default e => {
         side: THREE.DoubleSide,
         // depthWrite: false,
         transparent: true,
+
+        clipping: false,
+        fog: false,
+        lights: false,
       });
       material.freeze();
       
