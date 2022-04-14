@@ -735,10 +735,7 @@ export default e => {
     subApp && subApp.destroy();
   });
 
-  app.getPhysicsObjects = () => {
-    const result = subApp ? subApp.getPhysicsObjects() : [];
-    return result;
-  };
+  app.getPhysicsObjects = () => subApp ? subApp.getPhysicsObjects() : [];
 
   return app;
 };
