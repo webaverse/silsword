@@ -53,8 +53,13 @@ export default e => {
   const swordBackOffset = 0.5;
   const swordLength = 1.4;
   const maxNumDecals = 128;
+  let currentDecalNum = 0;
   const normalScale = 0.05;
   const numSegments = 128;
+  let collisionTime = [];
+  for(let i = 0; i < maxNumDecals*numSegments; i++){
+    collisionTime[i] = -1;
+  }
   const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, 1)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
     .applyMatrix4(new THREE.Matrix4().makeTranslation(0, -0.5, 0))
@@ -388,6 +393,9 @@ export default e => {
           updateRange.uv.count += localDecalGeometry.attributes.uv.count*2;
           updateRange.normal.count += localDecalGeometry.attributes.normal.count*3;
 
+          currentDecalNum++;
+          collisionTime[decalMesh.offset/(planeGeometry.attributes.position.array.length/3)]=performance.now();
+
           // update geometry attribute offset
           decalMesh.offset += localDecalGeometry.attributes.position.count;
           if (decalMesh.offset >= decalMesh.geometry.attributes.position.count) {
@@ -679,10 +687,39 @@ export default e => {
     'swordTopDownSlash':100,
     'swordTopDownSlashStep':150
   }
+
   let startAnimationTime=0;
   let playSoundSw=false;
+  const localPlayer = useLocalPlayer();
+  let positionAttributeLength = planeGeometry.attributes.position.array.length/3;
+  let preIndex = -1;
   useFrame(() => {
-    const localPlayer = useLocalPlayer();
+    
+    if(currentDecalNum>0){
+      let currentIndex = decalMesh.offset / positionAttributeLength - 1 >= 0 ? decalMesh.offset / positionAttributeLength - 1 : maxNumDecals*numSegments - 1;
+      currentIndex = currentIndex + 1 >= maxNumDecals * numSegments ? 0 : currentIndex + 1;
+      let i = preIndex+1;
+      while(true){
+        if(i>=maxNumDecals*numSegments)
+          i=0;
+        if(i===currentIndex)
+          break;
+        if(performance.now() - collisionTime[i]>1500 && collisionTime[i]!=-1){
+          for(let j = 0; j < positionAttributeLength; j++){
+            decalMesh.geometry.attributes.position.setXYZ(i * positionAttributeLength + j, 0, 0, 0);
+          }
+          collisionTime[i]=-1;
+          currentDecalNum--;
+          preIndex = i;
+        }
+        else{
+          break;
+        }
+        i++;
+      }
+      decalMesh.geometry.attributes.position.needsUpdate = true;
+    }
+    
     if(localPlayer.avatar && wearing){
       if(localPlayer.avatar.useAnimationIndex>=0){
         if(startAnimationTime===0){
