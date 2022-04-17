@@ -681,10 +681,11 @@ export default e => {
   }
   let startAnimationTime=0;
   let playSoundSw=false;
+  let lastPlaySoundAnimationIndex = null;
   useFrame(() => {
     const localPlayer = useLocalPlayer();
     if(localPlayer.avatar && wearing){
-      if(localPlayer.avatar.useAnimationIndex>=0){
+      if(localPlayer.avatar.useAnimationIndex !== lastPlaySoundAnimationIndex){
         if(startAnimationTime===0){
           startAnimationTime=performance.now();
         }
@@ -695,12 +696,14 @@ export default e => {
           const indexOfSlash=localPlayer.avatar.useAnimationIndex;
           sounds.playSound(soundFiles.combat[soundIndex+(4*indexOfSlash+Math.floor(Math.random()*4))]);
           playSoundSw=true;
+          lastPlaySoundAnimationIndex = localPlayer.avatar.useAnimationIndex;
         }
       }
       else{
         playSoundSw=false;
         startAnimationTime=0;
       }
+      if (!(localPlayer.avatar.useAnimationIndex >= 0)) lastPlaySoundAnimationIndex = null;
     }
     /* if (!wearing) {
       if (subApp) {
