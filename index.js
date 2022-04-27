@@ -695,6 +695,7 @@ export default e => {
         ){
           const indexOfSlash=localPlayer.avatar.useAnimationIndex;
           sounds.playSound(soundFiles.combat[soundIndex+(4*indexOfSlash+Math.floor(Math.random()*4))]);
+          localPlayer.characterSfx.playGrunt('attack');
           playSoundSw=true;
           lastPlaySoundAnimationIndex = localPlayer.avatar.useAnimationIndex;
         }
