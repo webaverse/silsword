@@ -685,7 +685,7 @@ export default e => {
   useFrame(() => {
     const localPlayer = useLocalPlayer();
     if(localPlayer.avatar && wearing){
-      if(localPlayer.avatar.useAnimationIndex !== lastPlaySoundAnimationIndex){
+      if(localPlayer.avatar.useAnimationIndex >= 0 && localPlayer.avatar.useAnimationIndex !== lastPlaySoundAnimationIndex){
         if(startAnimationTime===0){
           startAnimationTime=performance.now();
         }
