@@ -1,5 +1,6 @@
 {
   "name": "silsword",
+  "description": "silsword",
   "start_url": "index.js",
   "description": "A sword of immense power, imbued with the Rose of the Basilisk. It transform into any shape needed. In exchange, the owner is cursed to go up the street.",
   "components": [
