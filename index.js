@@ -421,8 +421,8 @@ export default e => {
     constructor(a, b) {
       const planeGeometry = new THREE.BufferGeometry();
       const planeNumber=100;
-      let position = new Float32Array(18*planeNumber);
-      planeGeometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
+      let positions = new Float32Array(18*planeNumber);
+      planeGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
       let uv = new Float32Array(12*planeNumber);
       let fraction = 1;
@@ -535,7 +535,7 @@ export default e => {
         `,
         side: THREE.DoubleSide,
         transparent: true,
-        depthWrite: false,
+        // depthWrite: false,
         blending: THREE.AdditiveBlending,
 
         clipping: false,
@@ -548,7 +548,7 @@ export default e => {
       this.planeNumber = planeNumber;
       this.a = a;
       this.material = material;
-      this.position.y = 1;
+      this.positions = positions;
       this.frustumCulled = false;
 
       this.point1 = new THREE.Vector3();
@@ -556,6 +556,7 @@ export default e => {
       this.localVector2 = new THREE.Vector3();
       this.temp = [];
       this.temp2 = [];
+      this.pos = new THREE.Vector3();
       this.quat = new THREE.Quaternion();
       this.quat.setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
 
@@ -563,13 +564,13 @@ export default e => {
       this.lastTriggerStartTime = -Infinity;
     }
     update(enabled, matrixWorld) {
-      let now = performance.now();
+      const now = performance.now();
 
-      if (enabled && !this.lastEnabled) {
-        this.lastTriggerStartTime = now;
-      }
-      now -= this.lastTriggerStartTime;
-      console.log(now);
+      // if (enabled && !this.lastEnabled) {
+      //   this.lastTriggerStartTime = now;
+      // }
+      // now -= this.lastTriggerStartTime;
+      // console.log(now);
 
       if(now>=10){
         this.material.uniforms.opacity.value = 1;
@@ -586,14 +587,17 @@ export default e => {
         
         // this.localVector2.set(currentDir.x, currentDir.y, currentDir.z).applyQuaternion(this.quat);
         localQuaternion.setFromRotationMatrix(matrixWorld);
-        this.localVector2.set(0, 0, -1).applyQuaternion(localQuaternion);
+        // this.localVector2.set(0, 0, -1).applyQuaternion(localQuaternion).applyQuaternion(this.quat);
+        this.localVector2.set(1, 0, 0);
+        this.pos.set(0, 0, 0).applyMatrix4(matrixWorld);
+        // console.log(this.pos.toArray().map(n=>n.toFixed(2)).join(', '));
 
-        this.point1.x=this.a.x;
-        this.point1.y=this.a.y;
-        this.point1.z=this.a.z;
-        this.point2.x=this.a.x;
-        this.point2.y=this.a.y;
-        this.point2.z=this.a.z;
+        this.point1.x=this.pos.x;
+        this.point1.y=this.pos.y;
+        this.point1.z=this.pos.z;
+        this.point2.x=this.pos.x;
+        this.point2.y=this.pos.y;
+        this.point2.z=this.pos.z;
         
         this.point1.x-=0.6*this.localVector2.x;
         this.point1.z-=0.6*this.localVector2.z;
@@ -601,37 +605,37 @@ export default e => {
         this.point2.z+=0.6*this.localVector2.z;
         
         for(let i=0;i<18;i++){
-          this.temp[i]=this.position[i];
+          this.temp[i]=this.positions[i];
         }
         for (let i = 0; i < this.planeNumber; i++){
           if(i===0){
-            this.position[0] = this.point1.x;
-            this.position[1] = this.a.y;
-            this.position[2] = this.point1.z;
-            this.position[3] = this.point2.x;
-            this.position[4] = this.a.y;
-            this.position[5] = this.point2.z;
+            this.positions[0] = this.point1.x;
+            this.positions[1] = this.pos.y;
+            this.positions[2] = this.point1.z;
+            this.positions[3] = this.point2.x;
+            this.positions[4] = this.pos.y;
+            this.positions[5] = this.point2.z;
         
-            this.position[6] = this.temp[0];
-            this.position[7] = this.temp[1];
-            this.position[8] = this.temp[2];
+            this.positions[6] = this.temp[0];
+            this.positions[7] = this.temp[1];
+            this.positions[8] = this.temp[2];
         
-            this.position[9] = this.temp[3];
-            this.position[10] = this.temp[4];
-            this.position[11] = this.temp[5];
+            this.positions[9] = this.temp[3];
+            this.positions[10] = this.temp[4];
+            this.positions[11] = this.temp[5];
         
-            this.position[12] = this.temp[0];
-            this.position[13] = this.temp[1];
-            this.position[14] = this.temp[2];
+            this.positions[12] = this.temp[0];
+            this.positions[13] = this.temp[1];
+            this.positions[14] = this.temp[2];
         
-            this.position[15] = this.point2.x;
-            this.position[16] = this.a.y;
-            this.position[17] = this.point2.z;
+            this.positions[15] = this.point2.x;
+            this.positions[16] = this.pos.y;
+            this.positions[17] = this.point2.z;
           }
           else{
             for(let j=0;j<18;j++){
-              this.temp2[j]=this.position[i*18+j];
-              this.position[i*18+j]=this.temp[j];
+              this.temp2[j]=this.positions[i*18+j];
+              this.positions[i*18+j]=this.temp[j];
               this.temp[j]=this.temp2[j];
             }
           }
@@ -652,6 +656,7 @@ export default e => {
     const a = new THREE.Vector3().fromArray(trail[0]);
     const b = new THREE.Vector3().fromArray(trail[1]);
     trailMesh = new TrailMesh(a, b);
+    window.trailMesh = trailMesh;
     sceneLowPriority.add(trailMesh);
   }
 
