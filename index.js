@@ -61,7 +61,11 @@ export default e => {
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
   
-  const texture = new THREE.TextureLoader().load(baseUrl + 'chevron2.svg');
+  const textureLoader = new THREE.TextureLoader()
+  const texture = textureLoader.load(baseUrl + 'chevron2.svg');
+  const textureR = textureLoader.load(baseUrl + 'textures/r.jpg');
+  const textureG = textureLoader.load(baseUrl + 'textures/g.jpg');
+  const textureB = textureLoader.load(baseUrl + 'textures/b.jpg');
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   const decalMaterial = new THREE.MeshBasicMaterial({
@@ -428,72 +432,91 @@ export default e => {
       
       const trailVsh = `\
         ${THREE.ShaderChunk.common}
-        // #define PI 3.1415926535897932384626433832795
-
         uniform float uTime;
         attribute float t;
         varying float vT;
-
-        /* mat4 rotationMatrix(vec3 axis, float angle)
-        {
-            axis = normalize(axis);
-            float s = sin(angle);
-            float c = cos(angle);
-            float oc = 1.0 - c;
-            
-            return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
-                        oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
-                        oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
-                        0.0,                                0.0,                                0.0,                                1.0);
-        }
-
-        varying float vDepth; */
+        varying vec2 vUv;
 
         ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
 
         void main() {
-          float f = 1. - pow((uTime - vT)/100., 0.1);
-          vec3 p = (f >= -1.) ? position : vec3(0.);
-          // vec3 p = position;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.);
+          vUv = uv;
+          // float f = 1. - pow((uTime - vT)/100., 0.1);
+          // vec3 p = (f >= -1.) ? position : vec3(0.);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
           vT = t;
           ${THREE.ShaderChunk.logdepthbuf_vertex}
         }
       `;
       const trailFsh = `\
-        // #define PI 3.1415926535897932384626433832795
+        // uniform float uTime;
+        // varying float vT;
         
-        // uniform sampler2D uTex;
-        // uniform vec3 uColor;
-        uniform float uTime;
-        varying float vT;
-        
-        // vec3 grey = vec3(0.5);
-        vec3 grey = vec3(0.7);
+        // vec3 grey = vec3(0.7);
         ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
 
+        // void main() {
+        //   // float f = 1. - pow((uTime - vT)/100., 0.1);
+        //   float f = 1.;
+        //   if (f >= 0.) {
+        //     gl_FragColor = vec4(grey, f);
+        //   } else {
+        //     discard;
+        //   }
+        
+        uniform sampler2D textureR;
+        uniform sampler2D textureG;
+        uniform sampler2D textureB;
+        uniform float uTime;
+        uniform float opacity;
+        varying vec2 vUv;
         void main() {
-          float f = 1. - pow((uTime - vT)/100., 0.1);
-          if (f >= 0.) {
-            gl_FragColor = vec4(grey, f);
-          } else {
-            discard;
+          vec3 texColorR = texture2D(
+            textureR,
+            vec2(
+              mod(1.*vUv.x+uTime*5.,1.),
+              mod(2.*vUv.y+uTime*5.,1.)
+            )
+          ).rgb;  
+          vec3 texColorG = texture2D(
+            textureG,
+            vec2(
+              mod(1.*vUv.x+uTime*5.,1.),
+              mod(2.*vUv.y+uTime*5.,1.)
+            )
+          ).rgb;  
+          vec3 texColorB = texture2D(
+            textureB,
+            vec2(
+              mod(1.*vUv.x,1.),
+              mod(2.5*vUv.y+uTime*2.5,1.)
+            )
+          ).rgb;  
+          gl_FragColor = vec4(texColorB.b)*((vec4(texColorR.r)+vec4(texColorG.g))/2.);
+          
+
+          if( gl_FragColor.b >= 0.1 ){
+            gl_FragColor = vec4(mix(vec3(0.020, 0.180, 1.920),vec3(0.284, 0.922, 0.980),gl_FragColor.b),gl_FragColor.b);
+          }else{
+            gl_FragColor = vec4(0.);
           }
+          gl_FragColor *= vec4(sin(vUv.y) - 0.1);
+          gl_FragColor *= vec4(smoothstep(0.3,0.628,vUv.y));
+          if(abs(vUv.x)>0.9 || abs(vUv.x)<0.1)
+              gl_FragColor.a=0.;
+          
+          gl_FragColor.a*=3.;
+          gl_FragColor.a*=opacity;
           ${THREE.ShaderChunk.logdepthbuf_fragment}
         }
       `;
       const material = new THREE.ShaderMaterial({
         uniforms: {
-          /* uColor: {
-            type: 'c',
-            value: new THREE.Color(0xef5350),
-            needsUpdate: true,
-          }, */
-          uTime: {
-            type: 'f',
-            value: 0,
-            needsUpdate: true,
-          },
+          uTime: { type: 'f', value: 0, needsUpdate: true, },
+          opacity: { value: 1 },
+          textureR: { type: 't', value: textureR },
+          textureG: { type: 't', value: textureG },
+          textureB: { type: 't', value: textureB },
         },
         vertexShader: trailVsh,
         fragmentShader: trailFsh,
@@ -604,7 +627,7 @@ export default e => {
 
       this.geometry.setDrawRange(0, this.positionIndex/3);
 
-      this.material.uniforms.uTime.value = now;
+      this.material.uniforms.uTime.value = now / 1000;
       this.material.uniforms.uTime.needsUpdate = true;
     }
   }
