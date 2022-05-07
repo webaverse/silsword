@@ -419,216 +419,239 @@ export default e => {
   scene.add(decalMesh);
   class TrailMesh extends THREE.Mesh {
     constructor(a, b) {
-      const numPositions = 256;
+      const planeGeometry = new THREE.BufferGeometry();
+      const planeNumber=100;
+      let position = new Float32Array(18*planeNumber);
+      planeGeometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
 
-      const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(6*3*numPositions);
-      const positionAttribute = new THREE.BufferAttribute(positions, 3);
-      geometry.setAttribute('position', positionAttribute);
-      const ts = new Float32Array(positions.length/3);
-      const tAttribute = new THREE.BufferAttribute(ts, 1);
-      geometry.setAttribute('t', tAttribute);
-      geometry.setDrawRange(0, 0);
+      let uv = new Float32Array(12*planeNumber);
+      let fraction = 1;
+      let ratio = 1 / planeNumber;
+      for (let i = 0; i < planeNumber; i++) {
+        uv[i * 12 + 0] = 0;
+        uv[i * 12 + 1] = fraction;
+
+        uv[i * 12 + 2] = 1;
+        uv[i * 12 + 3] = fraction;
+
+        uv[i * 12 + 4] = 0;
+        uv[i * 12 + 5] = fraction - ratio;
+
+        uv[i * 12 + 6] = 1;
+        uv[i * 12 + 7] = fraction - ratio;
+
+        uv[i * 12 + 8] = 0;
+        uv[i * 12 + 9] = fraction - ratio;
+
+        uv[i * 12 + 10] = 1;
+        uv[i * 12 + 11] = fraction;
+
+        fraction -= ratio;
+      }
+      planeGeometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
       
-      const trailVsh = `\
-        ${THREE.ShaderChunk.common}
-        uniform float uTime;
-        attribute float t;
-        varying float vT;
-        varying vec2 vUv;
-
-        ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
-
-        void main() {
-          vUv = uv;
-          // float f = 1. - pow((uTime - vT)/100., 0.1);
-          // vec3 p = (f >= -1.) ? position : vec3(0.);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
-          vT = t;
-          ${THREE.ShaderChunk.logdepthbuf_vertex}
-        }
-      `;
-      const trailFsh = `\
-        // uniform float uTime;
-        // varying float vT;
-        
-        // vec3 grey = vec3(0.7);
-        ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
-
-        // void main() {
-        //   // float f = 1. - pow((uTime - vT)/100., 0.1);
-        //   float f = 1.;
-        //   if (f >= 0.) {
-        //     gl_FragColor = vec4(grey, f);
-        //   } else {
-        //     discard;
-        //   }
-        
-        uniform sampler2D textureR;
-        uniform sampler2D textureG;
-        uniform sampler2D textureB;
-        uniform float uTime;
-        uniform float opacity;
-        varying vec2 vUv;
-        void main() {
-          vec3 texColorR = texture2D(
-            textureR,
-            vec2(
-              mod(1.*vUv.x+uTime*5.,1.),
-              mod(2.*vUv.y+uTime*5.,1.)
-            )
-          ).rgb;  
-          vec3 texColorG = texture2D(
-            textureG,
-            vec2(
-              mod(1.*vUv.x+uTime*5.,1.),
-              mod(2.*vUv.y+uTime*5.,1.)
-            )
-          ).rgb;  
-          vec3 texColorB = texture2D(
-            textureB,
-            vec2(
-              mod(1.*vUv.x,1.),
-              mod(2.5*vUv.y+uTime*2.5,1.)
-            )
-          ).rgb;  
-          gl_FragColor = vec4(texColorB.b)*((vec4(texColorR.r)+vec4(texColorG.g))/2.);
-          
-
-          if( gl_FragColor.b >= 0.1 ){
-            gl_FragColor = vec4(mix(vec3(0.020, 0.180, 1.920),vec3(0.284, 0.922, 0.980),gl_FragColor.b),gl_FragColor.b);
-          }else{
-            gl_FragColor = vec4(0.);
-          }
-          gl_FragColor *= vec4(sin(vUv.y) - 0.1);
-          gl_FragColor *= vec4(smoothstep(0.3,0.628,vUv.y));
-          if(abs(vUv.x)>0.9 || abs(vUv.x)<0.1)
-              gl_FragColor.a=0.;
-          
-          gl_FragColor.a*=3.;
-          gl_FragColor.a*=opacity;
-          ${THREE.ShaderChunk.logdepthbuf_fragment}
-        }
-      `;
       const material = new THREE.ShaderMaterial({
         uniforms: {
-          uTime: { type: 'f', value: 0, needsUpdate: true, },
-          opacity: { value: 1 },
+          uTime: {
+            value: 0,
+          },
+          opacity: {
+            value: 0,
+          },
           textureR: { type: 't', value: textureR },
           textureG: { type: 't', value: textureG },
           textureB: { type: 't', value: textureB },
+          t: { value: 0.9 }
         },
-        vertexShader: trailVsh,
-        fragmentShader: trailFsh,
+        vertexShader: `\
+          ${THREE.ShaderChunk.common}
+          ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
+          uniform float uTime;
+          varying vec2 vUv;
+          
+          void main() {
+            vUv=uv;
+            vUv.y*=1.0;
+            //vUv.x=1.-vUv.x;
+            vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+            vec4 viewPosition = viewMatrix * modelPosition;
+            vec4 projectionPosition = projectionMatrix * viewPosition;
+  
+            gl_Position = projectionPosition;
+            ${THREE.ShaderChunk.logdepthbuf_vertex}
+          }
+        `,
+        fragmentShader: `\
+          ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
+          uniform sampler2D textureR;
+          uniform sampler2D textureG;
+          uniform sampler2D textureB;
+          uniform float uTime;
+          uniform float opacity;
+          varying vec2 vUv;
+          void main() {
+            vec3 texColorR = texture2D(
+              textureR,
+              vec2(
+                mod(1.*vUv.x+uTime*5.,1.),
+                mod(2.*vUv.y+uTime*5.,1.)
+              )
+            ).rgb;  
+            vec3 texColorG = texture2D(
+              textureG,
+              vec2(
+                mod(1.*vUv.x+uTime*5.,1.),
+                mod(2.*vUv.y+uTime*5.,1.)
+              )
+            ).rgb;  
+            vec3 texColorB = texture2D(
+              textureB,
+              vec2(
+                mod(1.*vUv.x,1.),
+                mod(2.5*vUv.y+uTime*2.5,1.)
+              )
+            ).rgb;  
+            gl_FragColor = vec4(texColorB.b)*((vec4(texColorR.r)+vec4(texColorG.g))/2.);
+            
+            if( gl_FragColor.b >= 0.1 ){
+              gl_FragColor = vec4(mix(vec3(0.020, 0.180, 1.920),vec3(0.284, 0.922, 0.980),gl_FragColor.b),gl_FragColor.b);
+            }else{
+              gl_FragColor = vec4(0.);
+            }
+            gl_FragColor *= vec4(sin(vUv.y) - 0.1);
+            gl_FragColor *= vec4(smoothstep(0.3,0.628,vUv.y));
+            if(abs(vUv.x)>0.9 || abs(vUv.x)<0.1)
+              gl_FragColor.a=0.;
+            
+            gl_FragColor.a*=3.;
+            gl_FragColor.a*=opacity;
+              
+            //gl_FragColor = vec4(vec3(texColor), texColor.b);
+            //gl_FragColor.a*=(vUv.x)*5.;
+            //gl_FragColor = vec4(vUv, 1.0, 1.0);
+            //gl_FragColor = vec4(0,1,0,1);
+            ${THREE.ShaderChunk.logdepthbuf_fragment}
+          }
+        `,
         side: THREE.DoubleSide,
-        // depthWrite: false,
         transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
 
         clipping: false,
         fog: false,
         lights: false,
       });
       material.freeze();
-      
-      super(geometry, material);
-      this.frustumCulled = false;
+    
+      let plane=new THREE.Mesh(planeGeometry,material);
+      //app.add(plane);
+      plane.position.y = 1;
+      plane.frustumCulled = false;
 
-      this.a = a;
-      this.b = b;
-      this.lastAWorld = new THREE.Vector3(NaN, NaN, NaN);
-      this.lastBWorld = new THREE.Vector3(NaN, NaN, NaN);
-      this.positionIndex = 0;
-      this.tIndex = 0;
-      this.lastNow = -Infinity;
-      this.lastEnabled = false;
-      this.lastTriggerStartTime = -Infinity;
+      const point1 = new THREE.Vector3();
+      const point2 = new THREE.Vector3();
+      const localVector2 = new THREE.Vector3();
+      let temp = [];
+      let temp2 = [];
+      let quaternion = new THREE.Quaternion();
+      quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
+      let sonicBoomInApp = false;
     }
     update(enabled, matrixWorld) {
-      let now = performance.now();
-
-      if (enabled && !this.lastEnabled) {
-        this.lastAWorld.set(NaN, NaN, NaN);
-        this.lastBWorld.set(NaN, NaN, NaN);
-        this.positionIndex = 0;
-        this.tIndex = 0;
-        this.lastNow = -Infinity;
-        this.lastTriggerStartTime = now;
+      if(narutoRunTime>=10){
+        if(!sonicBoomInApp){
+          //console.log('add-planeTrail2');
+          app.add(plane);
+          sonicBoomInApp=true;
+        }
+        material.uniforms.opacity.value = 1;
       }
-      now -= this.lastTriggerStartTime;
+      else{
+        if(material.uniforms.opacity.value>0)
+          material.uniforms.opacity.value -= 0.0255;
+      }
+      if(narutoRunTime>0 && narutoRunTime<10){
+        material.uniforms.opacity.value = 0;
+      }
+      if(material.uniforms.opacity.value>0){
+        //console.log('sonic-boom-horiPlane');
+        
+        localVector2.set(currentDir.x, currentDir.y, currentDir.z).applyQuaternion(quaternion);
 
-      if (enabled && !isNaN(this.lastAWorld.x) && !isNaN(this.lastBWorld.x)) {
-        const positions = this.geometry.attributes.position.array;
-        const ts = this.geometry.attributes.t.array;
-
-        {
-          const startIndex = this.positionIndex;
-
-          this.lastAWorld
-            .toArray(positions, this.positionIndex);
-          this.positionIndex += 3;
-
-          this.lastBWorld
-            .toArray(positions, this.positionIndex);
-          this.positionIndex += 3;
-
-          localVector.copy(this.b)
-            .applyMatrix4(matrixWorld)
-            .toArray(positions, this.positionIndex);
-          this.positionIndex += 3;
-
-          this.lastAWorld
-            .toArray(positions, this.positionIndex);
-          this.positionIndex += 3;
-
-          localVector.copy(this.b)
-            .applyMatrix4(matrixWorld)
-            .toArray(positions, this.positionIndex);
-          this.positionIndex += 3;
-
-          localVector.copy(this.a)
-            .applyMatrix4(matrixWorld)
-            .toArray(positions, this.positionIndex);
-          this.positionIndex += 3;
-
-          this.geometry.attributes.position.updateRange = {
-            offset: startIndex,
-            count: (this.positionIndex - startIndex),
-          };
-          this.geometry.attributes.position.needsUpdate = true;
-
-          this.positionIndex = this.positionIndex % this.geometry.attributes.position.array.length;
+        point1.x=localPlayer.position.x;
+        point1.y=localPlayer.position.y;
+        point1.z=localPlayer.position.z;
+        point2.x=localPlayer.position.x;
+        point2.y=localPlayer.position.y;
+        point2.z=localPlayer.position.z;
+        
+        point1.x-=0.6*localVector2.x;
+        point1.z-=0.6*localVector2.z;
+        point2.x+=0.6*localVector2.x;
+        point2.z+=0.6*localVector2.z;
+        
+        for(let i=0;i<18;i++){
+          temp[i]=position[i];
         }
-        {
-          const startIndex = this.tIndex;
-
-          ts[this.tIndex++] = this.lastNow;
-          ts[this.tIndex++] = this.lastNow;
-          ts[this.tIndex++] = now;
-          ts[this.tIndex++] = this.lastNow;
-          ts[this.tIndex++] = now;
-          ts[this.tIndex++] = now;
-
-          this.geometry.attributes.t.updateRange = {
-            offset: startIndex,
-            count: (this.tIndex - startIndex),
-          };
-          this.geometry.attributes.t.needsUpdate = true;
-
-          this.tIndex = this.tIndex % this.geometry.attributes.t.array.length;
+        for (let i = 0; i < planeNumber; i++){
+          if(i===0){
+            position[0] = point1.x;
+            position[1] = localPlayer.position.y-1.55;
+            position[2] = point1.z;
+            if (localPlayer.avatar) {
+              position[1] -= localPlayer.avatar.height;
+              position[1] += 1.18;
+            }
+            position[3] = point2.x;
+            position[4] = localPlayer.position.y-1.55;
+            position[5] = point2.z;
+            if (localPlayer.avatar) {
+              position[4] -= localPlayer.avatar.height;
+              position[4] += 1.18;
+            }
+        
+            position[6] = temp[0];
+            position[7] = temp[1];
+            position[8] = temp[2];
+        
+            position[9] = temp[3];
+            position[10] = temp[4];
+            position[11] = temp[5];
+        
+            position[12] = temp[0];
+            position[13] = temp[1];
+            position[14] = temp[2];
+        
+            position[15] = point2.x;
+            position[16] = localPlayer.position.y-1.55;
+            position[17] = point2.z;
+            if (localPlayer.avatar) {
+              position[16] -= localPlayer.avatar.height;
+              position[16] += 1.18;
+            }
+          }
+          else{
+            for(let j=0;j<18;j++){
+              temp2[j]=position[i*18+j];
+              position[i*18+j]=temp[j];
+              temp[j]=temp2[j];
+            }
+          }
         }
-      } 
-
-      this.lastAWorld.copy(this.a)
-        .applyMatrix4(matrixWorld);
-      this.lastBWorld.copy(this.b)
-        .applyMatrix4(matrixWorld);
-      this.lastNow = now;
-      this.lastEnabled = enabled;
-
-      this.geometry.setDrawRange(0, this.positionIndex/3);
-
-      this.material.uniforms.uTime.value = now / 1000;
-      this.material.uniforms.uTime.needsUpdate = true;
+        
+        plane.geometry.verticesNeedUpdate = true;
+        plane.geometry.dynamic = true;
+        plane.geometry.attributes.position.needsUpdate = true;
+        material.uniforms.uTime.value = timestamp/1000;
+      }
+      else{
+        if(sonicBoomInApp){
+          //console.log('remove-planeTrail2');
+          app.remove(plane);
+          sonicBoomInApp=false;
+        }
+      }
     }
   }
   let trailMesh = null;
