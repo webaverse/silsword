@@ -40,6 +40,7 @@ const lastSwordTransform = _makeSwordTransform();
 
 export default e => {
   const app = useApp();
+  window.silsword = app;
   const scene = useScene();
   const {renderer, camera, sceneLowPriority} = useInternals();
   const physics = usePhysics();
@@ -529,13 +530,13 @@ export default e => {
             //gl_FragColor = vec4(vec3(texColor), texColor.b);
             //gl_FragColor.a*=(vUv.x)*5.;
             //gl_FragColor = vec4(vUv, 1.0, 1.0);
-            gl_FragColor = vec4(0,1,0,1);
+            // gl_FragColor = vec4(0,1,0,1);
             ${THREE.ShaderChunk.logdepthbuf_fragment}
           }
         `,
         side: THREE.DoubleSide,
         transparent: true,
-        // depthWrite: false,
+        depthWrite: false,
         blending: THREE.AdditiveBlending,
 
         clipping: false,
@@ -546,7 +547,7 @@ export default e => {
     
       super(planeGeometry, material);
       this.planeNumber = planeNumber;
-      this.a = a;
+      this.b = b;
       this.material = material;
       this.positions = positions;
       this.frustumCulled = false;
@@ -588,8 +589,9 @@ export default e => {
         // this.localVector2.set(currentDir.x, currentDir.y, currentDir.z).applyQuaternion(this.quat);
         localQuaternion.setFromRotationMatrix(matrixWorld);
         // this.localVector2.set(0, 0, -1).applyQuaternion(localQuaternion).applyQuaternion(this.quat);
-        this.localVector2.set(1, 0, 0);
-        this.pos.set(0, 0, 0).applyMatrix4(matrixWorld);
+        this.localVector2.set(1, 0, 0).applyQuaternion(localQuaternion);
+        // this.localVector2.set(1, 0, 0);
+        this.pos.copy(this.b).applyMatrix4(matrixWorld);
         // console.log(this.pos.toArray().map(n=>n.toFixed(2)).join(', '));
 
         this.point1.x=this.pos.x;
@@ -671,6 +673,7 @@ export default e => {
     subApp = metaversefile.createApp({
       name: u2,
     });
+    window.subApp = subApp
     subApp.name = 'silsword mesh';
     /* subApp.position.copy(app.position);
     subApp.quaternion.copy(app.quaternion);
