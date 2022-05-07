@@ -590,7 +590,7 @@ export default e => {
         // this.localVector2.set(currentDir.x, currentDir.y, currentDir.z).applyQuaternion(this.quat);
         localQuaternion.setFromRotationMatrix(matrixWorld);
         // this.localVector2.set(0, 0, -1).applyQuaternion(localQuaternion).applyQuaternion(this.quat);
-        this.localVector2.set(this.isZ ? 0 : 1, 0, this.isZ ? 1 : 0).applyQuaternion(localQuaternion);
+        this.localVector2.set(this.isZ ? 0 : 0.3, 0, this.isZ ? 0.3 : 0).applyQuaternion(localQuaternion);
         // this.localVector2.set(0, 0, 1).applyQuaternion(localQuaternion);
         // this.localVector2.set(1, 0, 0);
         this.pos.copy(this.b).applyMatrix4(matrixWorld);
@@ -603,12 +603,12 @@ export default e => {
         this.point2.y=this.pos.y;
         this.point2.z=this.pos.z;
         
-        this.point1.x-=0.6*this.localVector2.x;
-        this.point1.y-=0.6*this.localVector2.y;
-        this.point1.z-=0.6*this.localVector2.z;
-        this.point2.x+=0.6*this.localVector2.x;
-        this.point2.y+=0.6*this.localVector2.y;
-        this.point2.z+=0.6*this.localVector2.z;
+        this.point1.x-=this.localVector2.x;
+        this.point1.y-=this.localVector2.y;
+        this.point1.z-=this.localVector2.z;
+        this.point2.x+=this.localVector2.x;
+        this.point2.y+=this.localVector2.y;
+        this.point2.z+=this.localVector2.z;
         
         for(let i=0;i<18;i++){
           this.temp[i]=this.positions[i];
