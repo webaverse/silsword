@@ -419,7 +419,7 @@ export default e => {
   const decalMesh = _makeDecalMesh();
   scene.add(decalMesh);
   class TrailMesh extends THREE.Mesh {
-    constructor(a, b) {
+    constructor(a, b, isZ) {
       const planeGeometry = new THREE.BufferGeometry();
       const planeNumber=100;
       let positions = new Float32Array(18*planeNumber);
@@ -548,6 +548,7 @@ export default e => {
       super(planeGeometry, material);
       this.planeNumber = planeNumber;
       this.b = b;
+      this.isZ = isZ;
       this.material = material;
       this.positions = positions;
       this.frustumCulled = false;
@@ -589,7 +590,8 @@ export default e => {
         // this.localVector2.set(currentDir.x, currentDir.y, currentDir.z).applyQuaternion(this.quat);
         localQuaternion.setFromRotationMatrix(matrixWorld);
         // this.localVector2.set(0, 0, -1).applyQuaternion(localQuaternion).applyQuaternion(this.quat);
-        this.localVector2.set(1, 0, 0).applyQuaternion(localQuaternion);
+        this.localVector2.set(this.isZ ? 0 : 1, 0, this.isZ ? 1 : 0).applyQuaternion(localQuaternion);
+        // this.localVector2.set(0, 0, 1).applyQuaternion(localQuaternion);
         // this.localVector2.set(1, 0, 0);
         this.pos.copy(this.b).applyMatrix4(matrixWorld);
         // console.log(this.pos.toArray().map(n=>n.toFixed(2)).join(', '));
@@ -602,8 +604,10 @@ export default e => {
         this.point2.z=this.pos.z;
         
         this.point1.x-=0.6*this.localVector2.x;
+        this.point1.y-=0.6*this.localVector2.y;
         this.point1.z-=0.6*this.localVector2.z;
         this.point2.x+=0.6*this.localVector2.x;
+        this.point2.y+=0.6*this.localVector2.y;
         this.point2.z+=0.6*this.localVector2.z;
         
         for(let i=0;i<18;i++){
@@ -612,10 +616,10 @@ export default e => {
         for (let i = 0; i < this.planeNumber; i++){
           if(i===0){
             this.positions[0] = this.point1.x;
-            this.positions[1] = this.pos.y;
+            this.positions[1] = this.point1.y;
             this.positions[2] = this.point1.z;
             this.positions[3] = this.point2.x;
-            this.positions[4] = this.pos.y;
+            this.positions[4] = this.point2.y;
             this.positions[5] = this.point2.z;
         
             this.positions[6] = this.temp[0];
@@ -631,7 +635,7 @@ export default e => {
             this.positions[14] = this.temp[2];
         
             this.positions[15] = this.point2.x;
-            this.positions[16] = this.pos.y;
+            this.positions[16] = this.point2.y;
             this.positions[17] = this.point2.z;
           }
           else{
@@ -652,14 +656,18 @@ export default e => {
     }
   }
   let trailMesh = null;
+  let trailMesh2 = null;
   const useComponent = components.find(component => component.key === 'use');
   const trail = useComponent?.value.trail;
   if (Array.isArray(trail)) {
     const a = new THREE.Vector3().fromArray(trail[0]);
     const b = new THREE.Vector3().fromArray(trail[1]);
     trailMesh = new TrailMesh(a, b);
+    trailMesh2 = new TrailMesh(a, b, true);
     window.trailMesh = trailMesh;
+    window.trailMesh2 = trailMesh2;
     sceneLowPriority.add(trailMesh);
+    sceneLowPriority.add(trailMesh2);
   }
 
   let subApp = null;
@@ -767,6 +775,7 @@ export default e => {
 
     if (trailMesh && subApp) {
       trailMesh.update(using, subApp.matrixWorld);
+      trailMesh2.update(using, subApp.matrixWorld);
     }
     if (decalMesh) {
       //const localPlayer = useLocalPlayer();
@@ -780,6 +789,7 @@ export default e => {
 
   useCleanup(() => {
     trailMesh && sceneLowPriority.remove(trailMesh);
+    trailMesh2 && sceneLowPriority.remove(trailMesh2);
     decalMesh && scene.remove(decalMesh);
     subApp && subApp.destroy();
   });
