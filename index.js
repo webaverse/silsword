@@ -529,7 +529,7 @@ export default e => {
             //gl_FragColor = vec4(vec3(texColor), texColor.b);
             //gl_FragColor.a*=(vUv.x)*5.;
             //gl_FragColor = vec4(vUv, 1.0, 1.0);
-            //gl_FragColor = vec4(0,1,0,1);
+            gl_FragColor = vec4(0,1,0,1);
             ${THREE.ShaderChunk.logdepthbuf_fragment}
           }
         `,
@@ -544,114 +544,105 @@ export default e => {
       });
       material.freeze();
     
-      let plane=new THREE.Mesh(planeGeometry,material);
-      //app.add(plane);
-      plane.position.y = 1;
-      plane.frustumCulled = false;
+      super(planeGeometry, material);
+      this.planeNumber = planeNumber;
+      this.a = a;
+      this.material = material;
+      this.position.y = 1;
+      this.frustumCulled = false;
 
-      const point1 = new THREE.Vector3();
-      const point2 = new THREE.Vector3();
-      const localVector2 = new THREE.Vector3();
-      let temp = [];
-      let temp2 = [];
-      let quaternion = new THREE.Quaternion();
-      quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
-      let sonicBoomInApp = false;
+      this.point1 = new THREE.Vector3();
+      this.point2 = new THREE.Vector3();
+      this.localVector2 = new THREE.Vector3();
+      this.temp = [];
+      this.temp2 = [];
+      this.quat = new THREE.Quaternion();
+      this.quat.setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
+
+      this.lastEnabled = false;
+      this.lastTriggerStartTime = -Infinity;
     }
     update(enabled, matrixWorld) {
-      if(narutoRunTime>=10){
-        if(!sonicBoomInApp){
-          //console.log('add-planeTrail2');
-          app.add(plane);
-          sonicBoomInApp=true;
-        }
-        material.uniforms.opacity.value = 1;
+      let now = performance.now();
+
+      if (enabled && !this.lastEnabled) {
+        this.lastTriggerStartTime = now;
+      }
+      now -= this.lastTriggerStartTime;
+      console.log(now);
+
+      if(now>=10){
+        this.material.uniforms.opacity.value = 1;
       }
       else{
-        if(material.uniforms.opacity.value>0)
-          material.uniforms.opacity.value -= 0.0255;
+        if(this.material.uniforms.opacity.value>0)
+          this.material.uniforms.opacity.value -= 0.0255;
       }
-      if(narutoRunTime>0 && narutoRunTime<10){
-        material.uniforms.opacity.value = 0;
+      if(now>0 && now<10){
+        this.material.uniforms.opacity.value = 0;
       }
-      if(material.uniforms.opacity.value>0){
+      if(this.material.uniforms.opacity.value>0){
         //console.log('sonic-boom-horiPlane');
         
-        localVector2.set(currentDir.x, currentDir.y, currentDir.z).applyQuaternion(quaternion);
+        // this.localVector2.set(currentDir.x, currentDir.y, currentDir.z).applyQuaternion(this.quat);
+        localQuaternion.setFromRotationMatrix(matrixWorld);
+        this.localVector2.set(0, 0, -1).applyQuaternion(localQuaternion);
 
-        point1.x=localPlayer.position.x;
-        point1.y=localPlayer.position.y;
-        point1.z=localPlayer.position.z;
-        point2.x=localPlayer.position.x;
-        point2.y=localPlayer.position.y;
-        point2.z=localPlayer.position.z;
+        this.point1.x=this.a.x;
+        this.point1.y=this.a.y;
+        this.point1.z=this.a.z;
+        this.point2.x=this.a.x;
+        this.point2.y=this.a.y;
+        this.point2.z=this.a.z;
         
-        point1.x-=0.6*localVector2.x;
-        point1.z-=0.6*localVector2.z;
-        point2.x+=0.6*localVector2.x;
-        point2.z+=0.6*localVector2.z;
+        this.point1.x-=0.6*this.localVector2.x;
+        this.point1.z-=0.6*this.localVector2.z;
+        this.point2.x+=0.6*this.localVector2.x;
+        this.point2.z+=0.6*this.localVector2.z;
         
         for(let i=0;i<18;i++){
-          temp[i]=position[i];
+          this.temp[i]=this.position[i];
         }
-        for (let i = 0; i < planeNumber; i++){
+        for (let i = 0; i < this.planeNumber; i++){
           if(i===0){
-            position[0] = point1.x;
-            position[1] = localPlayer.position.y-1.55;
-            position[2] = point1.z;
-            if (localPlayer.avatar) {
-              position[1] -= localPlayer.avatar.height;
-              position[1] += 1.18;
-            }
-            position[3] = point2.x;
-            position[4] = localPlayer.position.y-1.55;
-            position[5] = point2.z;
-            if (localPlayer.avatar) {
-              position[4] -= localPlayer.avatar.height;
-              position[4] += 1.18;
-            }
+            this.position[0] = this.point1.x;
+            this.position[1] = this.a.y;
+            this.position[2] = this.point1.z;
+            this.position[3] = this.point2.x;
+            this.position[4] = this.a.y;
+            this.position[5] = this.point2.z;
         
-            position[6] = temp[0];
-            position[7] = temp[1];
-            position[8] = temp[2];
+            this.position[6] = this.temp[0];
+            this.position[7] = this.temp[1];
+            this.position[8] = this.temp[2];
         
-            position[9] = temp[3];
-            position[10] = temp[4];
-            position[11] = temp[5];
+            this.position[9] = this.temp[3];
+            this.position[10] = this.temp[4];
+            this.position[11] = this.temp[5];
         
-            position[12] = temp[0];
-            position[13] = temp[1];
-            position[14] = temp[2];
+            this.position[12] = this.temp[0];
+            this.position[13] = this.temp[1];
+            this.position[14] = this.temp[2];
         
-            position[15] = point2.x;
-            position[16] = localPlayer.position.y-1.55;
-            position[17] = point2.z;
-            if (localPlayer.avatar) {
-              position[16] -= localPlayer.avatar.height;
-              position[16] += 1.18;
-            }
+            this.position[15] = this.point2.x;
+            this.position[16] = this.a.y;
+            this.position[17] = this.point2.z;
           }
           else{
             for(let j=0;j<18;j++){
-              temp2[j]=position[i*18+j];
-              position[i*18+j]=temp[j];
-              temp[j]=temp2[j];
+              this.temp2[j]=this.position[i*18+j];
+              this.position[i*18+j]=this.temp[j];
+              this.temp[j]=this.temp2[j];
             }
           }
         }
         
-        plane.geometry.verticesNeedUpdate = true;
-        plane.geometry.dynamic = true;
-        plane.geometry.attributes.position.needsUpdate = true;
-        material.uniforms.uTime.value = timestamp/1000;
+        this.geometry.verticesNeedUpdate = true;
+        this.geometry.dynamic = true;
+        this.geometry.attributes.position.needsUpdate = true;
+        this.material.uniforms.uTime.value = now/1000;
       }
-      else{
-        if(sonicBoomInApp){
-          //console.log('remove-planeTrail2');
-          app.remove(plane);
-          sonicBoomInApp=false;
-        }
-      }
+      this.lastEnabled = enabled;
     }
   }
   let trailMesh = null;
