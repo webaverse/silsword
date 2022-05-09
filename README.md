@@ -4,3 +4,4 @@ New Trail ( based on @tcm390's [sonic-boom trail](https://github.com/webaverse/a
 
 https://user-images.githubusercontent.com/10785634/167287237-ea00ceb2-79b7-4d6b-802f-8fbdd6f71b77.mp4
 
+https://user-images.githubusercontent.com/10785634/167474997-9bad2c2b-9208-48e2-844a-1b0955769e8c.mp4
