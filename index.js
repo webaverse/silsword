@@ -953,7 +953,18 @@ export default e => {
   makeVerticleTrail();
 
   const makeFrontWave = () => {
-    const geometry = new THREE.SphereBufferGeometry(1.4, 32, 32, 0, Math.PI * 2, 0, Math.PI / 1.4);
+    const useComponent = components.find(component => component.key === 'use');
+    const trail = useComponent?.value.trail;
+    const c = new THREE.Vector3().fromArray(trail[2]);
+
+    // const geometry = new THREE.SphereBufferGeometry(1.4, 32, 32, 0, Math.PI * 2, 0, Math.PI / 1.4);
+    // const geometry = new THREE.ConeBufferGeometry(1.4, 2, 32);
+    const points = [
+      new THREE.Vector2(1, 0),
+      new THREE.Vector2(0, c.y),
+    ];
+    const geometry = new THREE.LatheGeometry(points, 32);
+
     const material = new THREE.ShaderMaterial({
       uniforms: {
         uTime: {
