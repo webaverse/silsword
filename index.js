@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 // import Simplex from './simplex-noise.js';
 import metaversefile from 'metaversefile';
-const {useApp, useFrame, useScene, useInternals, useLocalPlayer, useActivate, useUse, useWear, usePhysics, getAppByPhysicsId, useCleanup, useSound} = metaversefile;
+const {useApp, useFrame, useScene, useInternals, useLocalPlayer, useUse, useWear, usePhysics, useCleanup, useSound} = metaversefile;
 
 const baseUrl = import.meta.url.replace(/(\/)[^/\\]*$/, '$1');
 
@@ -42,7 +42,7 @@ export default e => {
   const app = useApp();
   window.silsword = app;
   const scene = useScene();
-  const {renderer, camera, sceneLowPriority} = useInternals();
+  const {sceneLowPriority} = useInternals();
   const physics = usePhysics();
 
   const sounds = useSound();
@@ -67,6 +67,8 @@ export default e => {
   const textureR = textureLoader.load(baseUrl + 'textures/r.jpg');
   const textureG = textureLoader.load(baseUrl + 'textures/g.jpg');
   const textureB = textureLoader.load(baseUrl + 'textures/b.jpg');
+  const wave2 = textureLoader.load(baseUrl + 'textures/wave2.jpeg');
+  const wave20 = textureLoader.load(baseUrl + 'textures/wave20.png');
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   const decalMaterial = new THREE.MeshBasicMaterial({
@@ -107,7 +109,6 @@ export default e => {
     decalMesh.frustumCulled = false;
     decalMesh.offset = 0;
     let lastHitPoint = null;
-    const width = 0.2;
     const thickness = 0.05;
     decalMesh.update = (using, matrixWorldSword, matrixWorldShoulder) => {
       const _getCurrentSwordTransform = swordTransform => {
@@ -276,7 +277,7 @@ export default e => {
 
           const nextPoint = _getNextPoint(currentSwordTransform);
           if (nextPoint && !nextPoint.initialHit) {
-            const {hitPoint, rotationMatrix, normal, normalBack, normalScaled, hitNormalBack, normalDownQuaternion, width, thickness} = nextPoint;
+            const {hitPoint, rotationMatrix, normalBack, normalScaled, normalDownQuaternion, width, thickness} = nextPoint;
 
             const localDecalGeometry = planeGeometry.clone();
 
@@ -668,6 +669,242 @@ export default e => {
     window.trailMesh2 = trailMesh2;
     sceneLowPriority.add(trailMesh);
     sceneLowPriority.add(trailMesh2);
+  }
+
+  // ################################################# front wave #################################################
+  {
+    const geometry = new THREE.SphereBufferGeometry(1.4, 32, 32, 0, Math.PI * 2, 0, Math.PI / 1.4);
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: {
+          type: 'f',
+          value: 0.0,
+        },
+        color: {
+          value: new THREE.Vector3(0.400, 0.723, 0.910),
+        },
+        strength: {
+          value: 0.01,
+        },
+        perlinnoise: {
+          type: 't',
+          value: wave2,
+        },
+
+      },
+      vertexShader: `\
+          
+        ${THREE.ShaderChunk.common}
+        ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
+        
+      
+        varying vec2 vUv;
+
+        void main() {
+            vUv = uv;
+            vec3 pos = vec3(position.x,position.y,position.z);
+            if(pos.y >= 1.87){
+                pos = vec3(position.x*(sin((position.y - 0.6)*1.27)-0.16),position.y,position.z*(sin((position.y - 0.6)*1.27)-0.16));
+            } else{
+                pos = vec3(position.x*(sin((position.y/2. -  .01)*.11)+0.75),position.y,position.z*(sin((position.y/2. -  .01)*.11)+0.75));
+            }
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.0 ); 
+            ${THREE.ShaderChunk.logdepthbuf_vertex}
+        }`,
+      fragmentShader: `\
+        
+        
+        ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
+        varying vec2 vUv;
+        uniform sampler2D perlinnoise;
+        uniform vec3 color;
+        uniform float strength;
+        uniform float uTime;
+    
+        vec3 rgbcol(vec3 col) {
+            return vec3(col.r/255.,col.g/255.,col.b/255.);
+        }
+    
+        void main() {
+            vec3 noisetex = texture2D(perlinnoise,vec2(vUv.x,mod(vUv.y+(20.*uTime),1.))).rgb;    
+            gl_FragColor = vec4(noisetex.rgb,1.0);
+    
+            if(gl_FragColor.r >= 0.5){
+                gl_FragColor = vec4(color,(0.9-vUv.y)/3.);
+            }else{
+                gl_FragColor = vec4(0.,0.,1.,0.);
+            }
+            gl_FragColor *= vec4(sin(vUv.y) - strength);
+            gl_FragColor *= vec4(smoothstep(0.01,0.928,vUv.y));
+            gl_FragColor.b*=20.;
+            gl_FragColor.a*=20.;
+            ${THREE.ShaderChunk.logdepthbuf_fragment}
+        }
+      `,
+      side: THREE.DoubleSide,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+
+      clipping: false,
+      fog: false,
+      lights: false,
+    });
+    material.freeze();
+
+    const material2 = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: {
+          type: 'f',
+          value: 0.0,
+        },
+        perlinnoise: {
+          type: 't',
+          value: wave20,
+        },
+        strength: {
+          value: 0.01,
+        },
+        color: {
+          value: new THREE.Vector3(0.25, 0.45, 1.25),
+        },
+
+      },
+      vertexShader: `\
+          
+        ${THREE.ShaderChunk.common}
+        ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
+        
+      
+        varying vec2 vUv;
+        varying vec3 vPos;
+
+        void main() {
+            vUv = uv;
+            vPos=position;
+            vec3 pos = vec3(position.x,position.y,position.z);
+            if(pos.y >= 1.87){
+                pos = vec3(position.x*(sin((position.y - 0.6)*1.27)-0.16),position.y,position.z*(sin((position.y - 0.6)*1.27)-0.16));
+            } else{
+                pos = vec3(position.x*(sin((position.y/2. -  .01)*.11)+0.75),position.y,position.z*(sin((position.y/2. -  .01)*.11)+0.75));
+            }
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.0 ); 
+            ${THREE.ShaderChunk.logdepthbuf_vertex}
+        }`,
+      fragmentShader: `\
+        
+        ${THREE.ShaderChunk.emissivemap_pars_fragment}
+        ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
+        varying vec2 vUv;
+        varying vec3 vPos;
+        uniform sampler2D perlinnoise;
+        uniform vec3 color;
+        uniform float uTime;
+        uniform float strength;
+        
+              #define PI 3.1415926
+
+              float pat(vec2 uv,float p,float q,float s,float glow)
+              {
+                  float z =  cos(p * uv.y/0.5) + cos(q  * uv.y/2.2) ;
+
+                  z += mod((uTime*100.0 + uv.x+uv.y * s*10.)*0.5,5.0); // +wobble
+                  float dist=abs(z)*(.1/glow);
+                  return dist;
+              }
+
+        
+        void main() {
+                    
+
+
+            vec2 uv = vPos.zy;
+            float d = pat(uv, 1.0, 2.0, 10.0, 0.35);
+            vec3 col = color*0.5/d;
+            vec4 fragColor = vec4(col,1.0);
+
+            vec3 noisetex = texture2D(
+                perlinnoise,
+                mod(1.*vec2(1.*vUv.x+uTime*10.,1.5*vUv.y + uTime*10.),1.)
+            ).rgb; 
+
+            gl_FragColor = vec4(noisetex.rgb,1.0);
+            
+            if(gl_FragColor.r >= 0.1){
+                gl_FragColor = fragColor;
+            }else{
+                gl_FragColor = vec4(0.,0.,1.,0.);
+            }
+            
+            gl_FragColor *= vec4(sin(vUv.y) - strength);
+            gl_FragColor *= vec4(smoothstep(0.01,0.928,vUv.y));
+            gl_FragColor.xyz /=4.;
+            gl_FragColor.b*=2.;
+            gl_FragColor.a*=20.;
+
+            
+            ${THREE.ShaderChunk.logdepthbuf_fragment}
+            ${THREE.ShaderChunk.emissivemap_fragment}
+        }`,
+      side: THREE.DoubleSide,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+
+      clipping: false,
+      fog: false,
+      lights: false,
+    });
+    material2.freeze();
+
+    const frontwave = new THREE.Mesh(geometry, material);
+    frontwave.position.y = 0;
+    frontwave.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), -90 * Math.PI / 180);
+
+    const frontwave2 = new THREE.Mesh(geometry, material2);
+    frontwave2.position.y = 0;
+    frontwave2.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), -90 * Math.PI / 180);
+
+    const group = new THREE.Group();
+    group.add(frontwave);
+    group.add(frontwave2);
+    // app.add(group);
+
+    let sonicBoomInApp = false;
+    useFrame(({timestamp}) => {
+      if (timestamp > 10) {
+        // console.log('sonic-boom-frontwave');
+        if (!sonicBoomInApp) {
+          debugger
+          // console.log('add-frontWave');
+          sceneLowPriority.add(group);
+          sonicBoomInApp = true;
+        }
+
+        // group.position.copy(localPlayer.position);
+        // group.rotation.copy(localPlayer.rotation);
+
+        // group.position.x -= 0.6 * currentDir.x;
+        // group.position.z -= 0.6 * currentDir.z;
+
+        group.scale.set(1, 1, 1);
+        material.uniforms.uTime.value = timestamp / 5000;
+        material2.uniforms.uTime.value = timestamp / 10000;
+      } else {
+        if (sonicBoomInApp) {
+          // console.log('remove-frontWave');
+          app.remove(group);
+          sonicBoomInApp = false;
+        }
+        // group.scale.set(0,0,0);
+      }
+
+      // material.uniforms.strength.value=Math.sin(timestamp/1000);
+      // material2.uniforms.strength.value=Math.sin(timestamp/1000);
+
+      // material2.uniforms.iResolution.value.set(window.innerWidth, window.innerHeight, 1);
+      // app.updateMatrixWorld();
+    });
   }
 
   let subApp = null;
