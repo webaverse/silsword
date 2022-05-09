@@ -1159,9 +1159,19 @@ export default e => {
     sceneLowPriority.add(frontwave);
     sceneLowPriority.add(frontwave2);
 
+    let enableTime = 0;
+    let lastDisableTime = 0;
+
     useFrame(({timestamp}) => {
       const useAction = useLocalPlayer().getAction('use');
       if (useAction?.index === 4) {
+        enableTime = timestamp - lastDisableTime;
+      } else {
+        enableTime = 0;
+        lastDisableTime = timestamp;
+      }
+
+      if (enableTime / 1000 > 0.4) {
         frontwave.visible = true;
         frontwave2.visible = true;
 
