@@ -422,10 +422,12 @@ export default e => {
   const decalMesh = _makeDecalMesh();
   scene.add(decalMesh);
 
-  // ########################################## preprocess for trails ######################################
+  //
+
   const trailDirObj = new THREE.Object3D();
   window.trailDirObj = trailDirObj;
-  {
+
+  const preprocessTrails = () => {
     const useComponent = components.find(component => component.key === 'use');
     const trail = useComponent?.value.trail;
     const a = new THREE.Vector3().fromArray(trail[0]);
@@ -443,10 +445,10 @@ export default e => {
 
       lastPosition.copy(trailDirObj.position);
     });
-  }
+  };
+  preprocessTrails();
 
-  // ########################################## horizontal trail ######################################
-  {
+  const makeHorizontalTrail = () => {
     const planeGeometry = new THREE.BufferGeometry();
     const planeNumber = 100;
     const position = new Float32Array(18 * planeNumber);
@@ -657,10 +659,10 @@ export default e => {
         material.uniforms.uTime.value = timestamp / 1000;
       }
     });
-  }
+  };
+  makeHorizontalTrail();
 
-  // ########################################## vertical trail ######################################
-  {
+  const makeVerticleTrail = () => {
     const planeGeometry = new THREE.BufferGeometry();
     const planeNumber = 100;
     const position = new Float32Array(18 * planeNumber);
@@ -871,10 +873,10 @@ export default e => {
         material.uniforms.uTime.value = timestamp / 1000;
       }
     });
-  }
+  };
+  makeVerticleTrail();
 
-  // ################################################# front wave #################################################
-  {
+  const makeFrontWave = () => {
     const geometry = new THREE.SphereBufferGeometry(1.4, 32, 32, 0, Math.PI * 2, 0, Math.PI / 1.4);
     const material = new THREE.ShaderMaterial({
       uniforms: {
@@ -1086,9 +1088,8 @@ export default e => {
         frontwave2.visible = false;
       }
     });
-  }
-
-  // ##########################################  ######################################
+  };
+  makeFrontWave();
 
   let subApp = null;
   e.waitUntil((async () => {
