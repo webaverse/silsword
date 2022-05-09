@@ -957,13 +957,14 @@ export default e => {
     const trail = useComponent?.value.trail;
     const c = new THREE.Vector3().fromArray(trail[2]);
 
-    // const geometry = new THREE.SphereBufferGeometry(1.4, 32, 32, 0, Math.PI * 2, 0, Math.PI / 1.4);
+    const geometry = new THREE.SphereBufferGeometry(1.4, 32, 32, 0, Math.PI * 2, 0, Math.PI / 1.4);
+    geometry.translate(0, 0.3, 0);
     // const geometry = new THREE.ConeBufferGeometry(1.4, 2, 32);
-    const points = [
-      new THREE.Vector2(1, 0),
-      new THREE.Vector2(0, c.y),
-    ];
-    const geometry = new THREE.LatheGeometry(points, 32);
+    // const points = [ // not good, too like an umbrella
+    //   new THREE.Vector2(1, 0),
+    //   new THREE.Vector2(0, c.y),
+    // ];
+    // const geometry = new THREE.LatheGeometry(points, 32);
 
     const material = new THREE.ShaderMaterial({
       uniforms: {
@@ -1171,7 +1172,7 @@ export default e => {
         lastDisableTime = timestamp;
       }
 
-      if (enableTime / 1000 > 0.4) {
+      if (enableTime / 1000 > 0.3) {
         frontwave.visible = true;
         frontwave2.visible = true;
 
