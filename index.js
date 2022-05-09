@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import metaversefile from 'metaversefile';
 const {useApp, useFrame, useScene, useInternals, useLocalPlayer, useActivate, useUse, useWear, usePhysics, getAppByPhysicsId, useCleanup, useSound} = metaversefile;
 
-const baseUrl = import.meta.url.replace(/(\/)[^\/\\]*$/, '$1');
+const baseUrl = import.meta.url.replace(/(\/)[^/\\]*$/, '$1');
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
@@ -29,7 +29,7 @@ const _makeSwordTransform = () => {
       this.swordQuaternion.copy(t.swordQuaternion);
       this.shoulderPosition.copy(t.shoulderPosition);
       this.shoulderQuaternion.copy(t.shoulderQuaternion);
-    }
+    },
   };
 };
 const tempSwordTransform = _makeSwordTransform();
@@ -47,7 +47,7 @@ export default e => {
 
   const sounds = useSound();
   const soundFiles = sounds.getSoundFiles();
-  const soundIndex=soundFiles.combat.map(sound => sound.name).indexOf('combat/sword_slash0-1.wav');
+  const soundIndex = soundFiles.combat.map(sound => sound.name).indexOf('combat/sword_slash0-1.wav');
 
   const {components} = app;
 
@@ -59,10 +59,10 @@ export default e => {
   const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, 1)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
     .applyMatrix4(new THREE.Matrix4().makeTranslation(0, -0.5, 0))
-    .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
+    .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI * 0.5))
     .toNonIndexed();
-  
-  const textureLoader = new THREE.TextureLoader()
+
+  const textureLoader = new THREE.TextureLoader();
   const texture = textureLoader.load(baseUrl + 'chevron2.svg');
   const textureR = textureLoader.load(baseUrl + 'textures/r.jpg');
   const textureG = textureLoader.load(baseUrl + 'textures/g.jpg');
@@ -113,7 +113,7 @@ export default e => {
       const _getCurrentSwordTransform = swordTransform => {
         matrixWorldSword.decompose(localVector, localQuaternion, localVector2);
         localQuaternion.multiply(
-          localQuaternion2.setFromAxisAngle(localVector2.set(1, 0, 0), Math.PI*0.5)
+          localQuaternion2.setFromAxisAngle(localVector2.set(1, 0, 0), Math.PI * 0.5),
         );
         swordTransform.swordPosition.copy(localVector);
         swordTransform.swordQuaternion.copy(localQuaternion);
@@ -159,16 +159,16 @@ export default e => {
         const line = localLine.set(
           currentSwordTransform.shoulderPosition,
           currentSwordTransform.swordPosition.clone()
-            .add(localVector.set(0, 0, -swordLength).applyQuaternion(currentSwordTransform.swordQuaternion))
+            .add(localVector.set(0, 0, -swordLength).applyQuaternion(currentSwordTransform.swordQuaternion)),
         );
         const lineQuaternion = localQuaternion.setFromRotationMatrix(
           localMatrix.lookAt(
             line.start,
             line.end,
-            localVector.set(0, 1, 0)
-          )
+            localVector.set(0, 1, 0),
+          ),
         );
-        let result = physics.raycast(line.start, lineQuaternion);
+        const result = physics.raycast(line.start, lineQuaternion);
 
         if (result) {
           const hitPoint = localVector.fromArray(result.point);
@@ -195,16 +195,16 @@ export default e => {
             const normalScaled = localVector4.copy(normal).multiplyScalar(normalScale);
             const normalBack = localVector5.copy(normal).multiplyScalar(swordBackOffset);
             const hitNormalBack = localVector6.copy(hitNormal).multiplyScalar(swordBackOffset);
-    
+
             const normalUpQuaternion = localQuaternion2.setFromUnitVectors(
               localVector7.set(0, 0, -1),
-              normal
+              normal,
             );
             const normalDownQuaternion = localQuaternion3.setFromUnitVectors(
               localVector7.set(0, 0, 1),
-              normal
+              normal,
             );
-    
+
             let rotationMatrix;
             let localWidth;
             let initialHit;
@@ -212,7 +212,7 @@ export default e => {
               rotationMatrix = localMatrix.lookAt(
                 lastHitPoint.hitPoint,
                 hitPoint,
-                hitNormal
+                hitNormal,
               );
               localWidth = lastHitPoint.hitPoint.distanceTo(hitPoint);
               initialHit = false;
@@ -248,7 +248,7 @@ export default e => {
       let uvOffset = 0;
       const _drawPoints = () => {
         for (let i = 1; i < numSegments; i++) {
-          const f = i/(numSegments - 1);
+          const f = i / (numSegments - 1);
 
           const currentSwordTransform = _lerpSwordTransform(startSwordTransform, endSwordTransform, tempSwordTransform2, f);
           /* if (using) {
@@ -276,7 +276,7 @@ export default e => {
 
           const nextPoint = _getNextPoint(currentSwordTransform);
           if (nextPoint && !nextPoint.initialHit) {
-            let {hitPoint, rotationMatrix, normal, normalBack, normalScaled, hitNormalBack, normalDownQuaternion, width, thickness} = nextPoint;
+            const {hitPoint, rotationMatrix, normal, normalBack, normalScaled, hitNormalBack, normalDownQuaternion, width, thickness} = nextPoint;
 
             const localDecalGeometry = planeGeometry.clone();
 
@@ -286,12 +286,12 @@ export default e => {
               .applyMatrix4(new THREE.Matrix4().makeTranslation(
                 hitPoint.x,
                 hitPoint.y,
-                hitPoint.z
+                hitPoint.z,
               ));
-            
+
             const uvs = localDecalGeometry.attributes.uv.array;
             for (let j = 0; j < localDecalGeometry.attributes.uv.count; j++) {
-              const index = j*2;
+              const index = j * 2;
               const yIndex = index + 1;
               uvs[yIndex] = (uvOffset + uvs[yIndex] * width) * 4; // y
             }
@@ -300,23 +300,23 @@ export default e => {
             // if there was a previous point, copy the last point's forward points to the next point's backward points
             if (lastHitPoint && !lastHitPoint.initialHit) {
               for (let j = 0; j < localDecalGeometry.attributes.position.count; j++) {
-                localVector.fromArray(planeGeometry.attributes.position.array, j*3);
+                localVector.fromArray(planeGeometry.attributes.position.array, j * 3);
                 if (localVector.z >= 1) { // if this is a backward point
                   const isLeft = localVector.x < 0;
                   (isLeft ? lastHitPoint.forwardLeftPoint : lastHitPoint.forwardRightPoint)
-                    .toArray(localDecalGeometry.attributes.position.array, j*3);
+                    .toArray(localDecalGeometry.attributes.position.array, j * 3);
                 }
               }
             }
 
-           // make the local decal geometry conform to the object mesh by raycasting from the decal mesh points down the normal
+            // make the local decal geometry conform to the object mesh by raycasting from the decal mesh points down the normal
             for (let j = 0; j < localDecalGeometry.attributes.position.count; j++) {
               // localVector.fromArray(planeGeometry.attributes.position.array, j*3);
               if (
                 localVector.z < 1 || // if this is a forward point
                 lastHitPoint.initialHit // if this is the beginning of a chain
               ) {
-                localVector.fromArray(localDecalGeometry.attributes.position.array, j*3);
+                localVector.fromArray(localDecalGeometry.attributes.position.array, j * 3);
                 localVector2.copy(localVector)
                   .add(normalBack);
                 const result = physics.raycast(localVector2, normalDownQuaternion);
@@ -325,21 +325,21 @@ export default e => {
                   if (localVector.distanceTo(localVector3) < 0.1) {
                     localVector3
                       .add(normalScaled)
-                      .toArray(localDecalGeometry.attributes.position.array, j*3);
+                      .toArray(localDecalGeometry.attributes.position.array, j * 3);
                   } else {
                     localVector.add(
                       localVector2.copy(localVector3)
                         .sub(localVector)
                         .normalize()
-                        .multiplyScalar(0.1)
-                    ).toArray(localDecalGeometry.attributes.position.array, j*3);
+                        .multiplyScalar(0.1),
+                    ).toArray(localDecalGeometry.attributes.position.array, j * 3);
                   }
                 }
               }
             }
 
-            nextPoint.forwardLeftPoint.fromArray(localDecalGeometry.attributes.position.array, 0*3);
-            nextPoint.forwardRightPoint.fromArray(localDecalGeometry.attributes.position.array, 2*3);
+            nextPoint.forwardLeftPoint.fromArray(localDecalGeometry.attributes.position.array, 0 * 3);
+            nextPoint.forwardRightPoint.fromArray(localDecalGeometry.attributes.position.array, 2 * 3);
             localDecalGeometries.push(localDecalGeometry);
           }
 
@@ -357,30 +357,32 @@ export default e => {
       if (localDecalGeometies.length > 0) {
         const _makeUpdateRange = () => ({
           position: {
-            offset: decalMesh.offset*3,
+            offset: decalMesh.offset * 3,
             count: 0,
           },
           uv: {
-            offset: decalMesh.offset*2,
+            offset: decalMesh.offset * 2,
             count: 0,
           },
           normal: {
-            offset: decalMesh.offset*3,
+            offset: decalMesh.offset * 3,
             count: 0,
           },
         });
         const lastUpdateRange = updateRanges.length > 0 ? updateRanges[updateRanges.length - 1] : null;
         let updateRange = (
           lastUpdateRange &&
-            ((lastUpdateRange.position.offset + lastUpdateRange.position.count) < decalMesh.geometry.attributes.position.count*3)
-        ) ? lastUpdateRange : null;
+            ((lastUpdateRange.position.offset + lastUpdateRange.position.count) < decalMesh.geometry.attributes.position.count * 3)
+        )
+          ? lastUpdateRange
+          : null;
         for (const localDecalGeometry of localDecalGeometies) {
           const startOffset = decalMesh.offset;
-          
+
           for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
-            decalMesh.geometry.attributes.position.setXYZ( i + startOffset, localDecalGeometry.attributes.position.getX(i), localDecalGeometry.attributes.position.getY(i), localDecalGeometry.attributes.position.getZ(i) );
-            decalMesh.geometry.attributes.uv.setXY( i + startOffset, localDecalGeometry.attributes.uv.getX(i), localDecalGeometry.attributes.uv.getY(i) );
-            decalMesh.geometry.attributes.normal.setXYZ( i + startOffset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i) );
+            decalMesh.geometry.attributes.position.setXYZ(i + startOffset, localDecalGeometry.attributes.position.getX(i), localDecalGeometry.attributes.position.getY(i), localDecalGeometry.attributes.position.getZ(i));
+            decalMesh.geometry.attributes.uv.setXY(i + startOffset, localDecalGeometry.attributes.uv.getX(i), localDecalGeometry.attributes.uv.getY(i));
+            decalMesh.geometry.attributes.normal.setXYZ(i + startOffset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i));
             // decalMesh.geometry.index.setX( i + offset, localDecalGeometry.index.getX(i) );
           }
 
@@ -389,9 +391,9 @@ export default e => {
             updateRange = _makeUpdateRange();
             updateRanges.push(updateRange);
           }
-          updateRange.position.count += localDecalGeometry.attributes.position.count*3;
-          updateRange.uv.count += localDecalGeometry.attributes.uv.count*2;
-          updateRange.normal.count += localDecalGeometry.attributes.normal.count*3;
+          updateRange.position.count += localDecalGeometry.attributes.position.count * 3;
+          updateRange.uv.count += localDecalGeometry.attributes.uv.count * 2;
+          updateRange.normal.count += localDecalGeometry.attributes.normal.count * 3;
 
           // update geometry attribute offset
           decalMesh.offset += localDecalGeometry.attributes.position.count;
@@ -421,13 +423,13 @@ export default e => {
   class TrailMesh extends THREE.Mesh {
     constructor(a, b, isZ) {
       const planeGeometry = new THREE.BufferGeometry();
-      const planeNumber=100;
-      let positions = new Float32Array(18*planeNumber);
+      const planeNumber = 100;
+      const positions = new Float32Array(18 * planeNumber);
       planeGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-      let uv = new Float32Array(12*planeNumber);
+      const uv = new Float32Array(12 * planeNumber);
       let fraction = 1;
-      let ratio = 1 / planeNumber;
+      const ratio = 1 / planeNumber;
       for (let i = 0; i < planeNumber; i++) {
         uv[i * 12 + 0] = 0;
         uv[i * 12 + 1] = fraction;
@@ -450,7 +452,7 @@ export default e => {
         fraction -= ratio;
       }
       planeGeometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-      
+
       const material = new THREE.ShaderMaterial({
         uniforms: {
           uTime: {
@@ -459,10 +461,10 @@ export default e => {
           opacity: {
             value: 0,
           },
-          textureR: { type: 't', value: textureR },
-          textureG: { type: 't', value: textureG },
-          textureB: { type: 't', value: textureB },
-          t: { value: 0.9 }
+          textureR: {type: 't', value: textureR},
+          textureG: {type: 't', value: textureG},
+          textureB: {type: 't', value: textureB},
+          t: {value: 0.9},
         },
         vertexShader: `\
           ${THREE.ShaderChunk.common}
@@ -544,7 +546,7 @@ export default e => {
         lights: false,
       });
       material.freeze();
-    
+
       super(planeGeometry, material);
       this.planeNumber = planeNumber;
       this.b = b;
@@ -560,11 +562,12 @@ export default e => {
       this.temp2 = [];
       this.pos = new THREE.Vector3();
       this.quat = new THREE.Quaternion();
-      this.quat.setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2);
+      this.quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
 
       this.lastEnabled = false;
       this.lastTriggerStartTime = -Infinity;
     }
+
     update(enabled, matrixWorld) {
       const now = performance.now();
 
@@ -574,19 +577,17 @@ export default e => {
       // now -= this.lastTriggerStartTime;
       // console.log(now);
 
-      if(now>=10){
+      if (now >= 10) {
         this.material.uniforms.opacity.value = 1;
+      } else {
+        if (this.material.uniforms.opacity.value > 0) { this.material.uniforms.opacity.value -= 0.0255; }
       }
-      else{
-        if(this.material.uniforms.opacity.value>0)
-          this.material.uniforms.opacity.value -= 0.0255;
-      }
-      if(now>0 && now<10){
+      if (now > 0 && now < 10) {
         this.material.uniforms.opacity.value = 0;
       }
-      if(this.material.uniforms.opacity.value>0){
-        //console.log('sonic-boom-horiPlane');
-        
+      if (this.material.uniforms.opacity.value > 0) {
+        // console.log('sonic-boom-horiPlane');
+
         // this.localVector2.set(currentDir.x, currentDir.y, currentDir.z).applyQuaternion(this.quat);
         localQuaternion.setFromRotationMatrix(matrixWorld);
         // this.localVector2.set(0, 0, -1).applyQuaternion(localQuaternion).applyQuaternion(this.quat);
@@ -596,61 +597,60 @@ export default e => {
         this.pos.copy(this.b).applyMatrix4(matrixWorld);
         // console.log(this.pos.toArray().map(n=>n.toFixed(2)).join(', '));
 
-        this.point1.x=this.pos.x;
-        this.point1.y=this.pos.y;
-        this.point1.z=this.pos.z;
-        this.point2.x=this.pos.x;
-        this.point2.y=this.pos.y;
-        this.point2.z=this.pos.z;
-        
-        this.point1.x-=this.localVector2.x;
-        this.point1.y-=this.localVector2.y;
-        this.point1.z-=this.localVector2.z;
-        this.point2.x+=this.localVector2.x;
-        this.point2.y+=this.localVector2.y;
-        this.point2.z+=this.localVector2.z;
-        
-        for(let i=0;i<18;i++){
-          this.temp[i]=this.positions[i];
+        this.point1.x = this.pos.x;
+        this.point1.y = this.pos.y;
+        this.point1.z = this.pos.z;
+        this.point2.x = this.pos.x;
+        this.point2.y = this.pos.y;
+        this.point2.z = this.pos.z;
+
+        this.point1.x -= this.localVector2.x;
+        this.point1.y -= this.localVector2.y;
+        this.point1.z -= this.localVector2.z;
+        this.point2.x += this.localVector2.x;
+        this.point2.y += this.localVector2.y;
+        this.point2.z += this.localVector2.z;
+
+        for (let i = 0; i < 18; i++) {
+          this.temp[i] = this.positions[i];
         }
-        for (let i = 0; i < this.planeNumber; i++){
-          if(i===0){
+        for (let i = 0; i < this.planeNumber; i++) {
+          if (i === 0) {
             this.positions[0] = this.point1.x;
             this.positions[1] = this.point1.y;
             this.positions[2] = this.point1.z;
             this.positions[3] = this.point2.x;
             this.positions[4] = this.point2.y;
             this.positions[5] = this.point2.z;
-        
+
             this.positions[6] = this.temp[0];
             this.positions[7] = this.temp[1];
             this.positions[8] = this.temp[2];
-        
+
             this.positions[9] = this.temp[3];
             this.positions[10] = this.temp[4];
             this.positions[11] = this.temp[5];
-        
+
             this.positions[12] = this.temp[0];
             this.positions[13] = this.temp[1];
             this.positions[14] = this.temp[2];
-        
+
             this.positions[15] = this.point2.x;
             this.positions[16] = this.point2.y;
             this.positions[17] = this.point2.z;
-          }
-          else{
-            for(let j=0;j<18;j++){
-              this.temp2[j]=this.positions[i*18+j];
-              this.positions[i*18+j]=this.temp[j];
-              this.temp[j]=this.temp2[j];
+          } else {
+            for (let j = 0; j < 18; j++) {
+              this.temp2[j] = this.positions[i * 18 + j];
+              this.positions[i * 18 + j] = this.temp[j];
+              this.temp[j] = this.temp2[j];
             }
           }
         }
-        
+
         this.geometry.verticesNeedUpdate = true;
         this.geometry.dynamic = true;
         this.geometry.attributes.position.needsUpdate = true;
-        this.material.uniforms.uTime.value = now/1000;
+        this.material.uniforms.uTime.value = now / 1000;
       }
       this.lastEnabled = enabled;
     }
@@ -681,7 +681,7 @@ export default e => {
     subApp = metaversefile.createApp({
       name: u2,
     });
-    window.subApp = subApp
+    window.subApp = subApp;
     subApp.name = 'silsword mesh';
     /* subApp.position.copy(app.position);
     subApp.quaternion.copy(app.quaternion);
@@ -726,36 +726,35 @@ export default e => {
     using = e.use;
   });
 
-  let animationOffset={
-    'swordSideSlash':350,
-    'swordSideSlashStep':150,
-    'swordTopDownSlash':100,
-    'swordTopDownSlashStep':150
-  }
-  let startAnimationTime=0;
-  let playSoundSw=false;
+  const animationOffset = {
+    swordSideSlash: 350,
+    swordSideSlashStep: 150,
+    swordTopDownSlash: 100,
+    swordTopDownSlashStep: 150,
+  };
+  let startAnimationTime = 0;
+  let playSoundSw = false;
   let lastPlaySoundAnimationIndex = null;
   useFrame(() => {
     const localPlayer = useLocalPlayer();
-    if(localPlayer.avatar && wearing){
-      if(localPlayer.avatar.useAnimationIndex >= 0 && localPlayer.avatar.useAnimationIndex !== lastPlaySoundAnimationIndex){
-        if(startAnimationTime===0){
-          startAnimationTime=performance.now();
+    if (localPlayer.avatar && wearing) {
+      if (localPlayer.avatar.useAnimationIndex >= 0 && localPlayer.avatar.useAnimationIndex !== lastPlaySoundAnimationIndex) {
+        if (startAnimationTime === 0) {
+          startAnimationTime = performance.now();
         }
-        if(
-          performance.now()-startAnimationTime>=animationOffset[localPlayer.avatar.useAnimationCombo[localPlayer.avatar.useAnimationIndex]]
-          && !playSoundSw
-        ){
-          const indexOfSlash=localPlayer.avatar.useAnimationIndex;
-          sounds.playSound(soundFiles.combat[soundIndex+(4*indexOfSlash+Math.floor(Math.random()*4))]);
+        if (
+          performance.now() - startAnimationTime >= animationOffset[localPlayer.avatar.useAnimationCombo[localPlayer.avatar.useAnimationIndex]] &&
+          !playSoundSw
+        ) {
+          const indexOfSlash = localPlayer.avatar.useAnimationIndex;
+          sounds.playSound(soundFiles.combat[soundIndex + (4 * indexOfSlash + Math.floor(Math.random() * 4))]);
           localPlayer.characterSfx.playGrunt('attack');
-          playSoundSw=true;
+          playSoundSw = true;
           lastPlaySoundAnimationIndex = localPlayer.avatar.useAnimationIndex;
         }
-      }
-      else{
-        playSoundSw=false;
-        startAnimationTime=0;
+      } else {
+        playSoundSw = false;
+        startAnimationTime = 0;
       }
       if (!(localPlayer.avatar.useAnimationIndex >= 0)) lastPlaySoundAnimationIndex = null;
     }
@@ -778,7 +777,7 @@ export default e => {
       trailMesh2.update(using, subApp.matrixWorld);
     }
     if (decalMesh) {
-      //const localPlayer = useLocalPlayer();
+      // const localPlayer = useLocalPlayer();
       if (subApp && localPlayer.avatar) {
         decalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
       }
