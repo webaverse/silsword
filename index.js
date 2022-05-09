@@ -583,6 +583,8 @@ export default e => {
     const temp = [];
     const temp2 = [];
 
+    let lastEnabled = false;
+
     useFrame(({timestamp}) => {
       if (!subApp) return;
 
@@ -592,10 +594,44 @@ export default e => {
       const localPlayer = useLocalPlayer();
       const useAction = localPlayer.getAction('use');
 
-      if (localPlayer.avatar.useTime > 0 && useAction.index < 4) {
+      const enabled = localPlayer.avatar.useTime > 0 && useAction.index < 4;
+
+      if (enabled) {
         material.uniforms.opacity.value = 1;
       } else {
         if (material.uniforms.opacity.value > 0) { material.uniforms.opacity.value -= 0.0255; }
+      }
+
+      if (enabled && !lastEnabled) { // reset vertices
+        localVector.copy(trailDirObj.position);
+        for (let i = 0; i < planeNumber; i++) {
+          position[i * 18 + 0] = localVector.x;
+          position[i * 18 + 1] = localVector.y;
+          position[i * 18 + 2] = localVector.z;
+          position[i * 18 + 3] = localVector.x;
+          position[i * 18 + 4] = localVector.y;
+          position[i * 18 + 5] = localVector.z;
+
+          position[i * 18 + 6] = localVector.x;
+          position[i * 18 + 7] = localVector.y;
+          position[i * 18 + 8] = localVector.z;
+
+          position[i * 18 + 9] = localVector.x;
+          position[i * 18 + 10] = localVector.y;
+          position[i * 18 + 11] = localVector.z;
+
+          position[i * 18 + 12] = localVector.x;
+          position[i * 18 + 13] = localVector.y;
+          position[i * 18 + 14] = localVector.z;
+
+          position[i * 18 + 15] = localVector.x;
+          position[i * 18 + 16] = localVector.y;
+          position[i * 18 + 17] = localVector.z;
+        }
+
+        planeGeometry.verticesNeedUpdate = true;
+        planeGeometry.dynamic = true;
+        planeGeometry.attributes.position.needsUpdate = true;
       }
 
       if (material.uniforms.opacity.value > 0) {
@@ -658,6 +694,8 @@ export default e => {
         planeGeometry.attributes.position.needsUpdate = true;
         material.uniforms.uTime.value = timestamp / 1000;
       }
+
+      lastEnabled = enabled;
     });
   };
   makeHorizontalTrail();
@@ -797,6 +835,8 @@ export default e => {
     const temp = [];
     const temp2 = [];
 
+    let lastEnabled = false;
+
     useFrame(({timestamp}) => {
       if (!subApp) return;
 
@@ -806,10 +846,44 @@ export default e => {
       const localPlayer = useLocalPlayer();
       const useAction = localPlayer.getAction('use');
 
-      if (localPlayer.avatar.useTime > 0 && useAction.index < 4) {
+      const enabled = localPlayer.avatar.useTime > 0 && useAction.index < 4;
+
+      if (enabled) {
         material.uniforms.opacity.value = 1;
       } else {
         if (material.uniforms.opacity.value > 0) { material.uniforms.opacity.value -= 0.0255; }
+      }
+
+      if (enabled && !lastEnabled) { // reset vertices
+        localVector.copy(trailDirObj.position);
+        for (let i = 0; i < planeNumber; i++) {
+          position[i * 18 + 0] = localVector.x;
+          position[i * 18 + 1] = localVector.y;
+          position[i * 18 + 2] = localVector.z;
+          position[i * 18 + 3] = localVector.x;
+          position[i * 18 + 4] = localVector.y;
+          position[i * 18 + 5] = localVector.z;
+
+          position[i * 18 + 6] = localVector.x;
+          position[i * 18 + 7] = localVector.y;
+          position[i * 18 + 8] = localVector.z;
+
+          position[i * 18 + 9] = localVector.x;
+          position[i * 18 + 10] = localVector.y;
+          position[i * 18 + 11] = localVector.z;
+
+          position[i * 18 + 12] = localVector.x;
+          position[i * 18 + 13] = localVector.y;
+          position[i * 18 + 14] = localVector.z;
+
+          position[i * 18 + 15] = localVector.x;
+          position[i * 18 + 16] = localVector.y;
+          position[i * 18 + 17] = localVector.z;
+        }
+
+        planeGeometry.verticesNeedUpdate = true;
+        planeGeometry.dynamic = true;
+        planeGeometry.attributes.position.needsUpdate = true;
       }
 
       if (material.uniforms.opacity.value > 0) {
@@ -872,6 +946,8 @@ export default e => {
         planeGeometry.attributes.position.needsUpdate = true;
         material.uniforms.uTime.value = timestamp / 1000;
       }
+
+      lastEnabled = enabled;
     });
   };
   makeVerticleTrail();
