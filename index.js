@@ -421,254 +421,225 @@ export default e => {
   };
   const decalMesh = _makeDecalMesh();
   scene.add(decalMesh);
-  class TrailMesh extends THREE.Mesh {
-    constructor(a, b, isZ) {
-      const planeGeometry = new THREE.BufferGeometry();
-      const planeNumber = 100;
-      const positions = new Float32Array(18 * planeNumber);
-      planeGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-      const uv = new Float32Array(12 * planeNumber);
-      let fraction = 1;
-      const ratio = 1 / planeNumber;
-      for (let i = 0; i < planeNumber; i++) {
-        uv[i * 12 + 0] = 0;
-        uv[i * 12 + 1] = fraction;
-
-        uv[i * 12 + 2] = 1;
-        uv[i * 12 + 3] = fraction;
-
-        uv[i * 12 + 4] = 0;
-        uv[i * 12 + 5] = fraction - ratio;
-
-        uv[i * 12 + 6] = 1;
-        uv[i * 12 + 7] = fraction - ratio;
-
-        uv[i * 12 + 8] = 0;
-        uv[i * 12 + 9] = fraction - ratio;
-
-        uv[i * 12 + 10] = 1;
-        uv[i * 12 + 11] = fraction;
-
-        fraction -= ratio;
-      }
-      planeGeometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-
-      const material = new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: {
-            value: 0,
-          },
-          opacity: {
-            value: 0,
-          },
-          textureR: {type: 't', value: textureR},
-          textureG: {type: 't', value: textureG},
-          textureB: {type: 't', value: textureB},
-          t: {value: 0.9},
-        },
-        vertexShader: `\
-          ${THREE.ShaderChunk.common}
-          ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
-          uniform float uTime;
-          varying vec2 vUv;
-          
-          void main() {
-            vUv=uv;
-            vUv.y*=1.0;
-            //vUv.x=1.-vUv.x;
-            vec4 modelPosition = modelMatrix * vec4(position, 1.0);
-            vec4 viewPosition = viewMatrix * modelPosition;
-            vec4 projectionPosition = projectionMatrix * viewPosition;
-  
-            gl_Position = projectionPosition;
-            ${THREE.ShaderChunk.logdepthbuf_vertex}
-          }
-        `,
-        fragmentShader: `\
-          ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
-          uniform sampler2D textureR;
-          uniform sampler2D textureG;
-          uniform sampler2D textureB;
-          uniform float uTime;
-          uniform float opacity;
-          varying vec2 vUv;
-          void main() {
-            vec3 texColorR = texture2D(
-              textureR,
-              vec2(
-                mod(1.*vUv.x+uTime*5.,1.),
-                mod(2.*vUv.y+uTime*5.,1.)
-              )
-            ).rgb;  
-            vec3 texColorG = texture2D(
-              textureG,
-              vec2(
-                mod(1.*vUv.x+uTime*5.,1.),
-                mod(2.*vUv.y+uTime*5.,1.)
-              )
-            ).rgb;  
-            vec3 texColorB = texture2D(
-              textureB,
-              vec2(
-                mod(1.*vUv.x,1.),
-                mod(2.5*vUv.y+uTime*2.5,1.)
-              )
-            ).rgb;  
-            gl_FragColor = vec4(texColorB.b)*((vec4(texColorR.r)+vec4(texColorG.g))/2.);
-            
-            if( gl_FragColor.b >= 0.1 ){
-              gl_FragColor = vec4(mix(vec3(0.020, 0.180, 1.920),vec3(0.284, 0.922, 0.980),gl_FragColor.b),gl_FragColor.b);
-            }else{
-              gl_FragColor = vec4(0.);
-            }
-            gl_FragColor *= vec4(sin(vUv.y) - 0.1);
-            gl_FragColor *= vec4(smoothstep(0.3,0.628,vUv.y));
-            if(abs(vUv.x)>0.9 || abs(vUv.x)<0.1)
-              gl_FragColor.a=0.;
-            
-            gl_FragColor.a*=3.;
-            gl_FragColor.a*=opacity;
-              
-            //gl_FragColor = vec4(vec3(texColor), texColor.b);
-            //gl_FragColor.a*=(vUv.x)*5.;
-            //gl_FragColor = vec4(vUv, 1.0, 1.0);
-            // gl_FragColor = vec4(0,1,0,1);
-            ${THREE.ShaderChunk.logdepthbuf_fragment}
-          }
-        `,
-        side: THREE.DoubleSide,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-
-        clipping: false,
-        fog: false,
-        lights: false,
-      });
-      material.freeze();
-
-      super(planeGeometry, material);
-      this.planeNumber = planeNumber;
-      this.b = b;
-      this.isZ = isZ;
-      this.material = material;
-      this.positions = positions;
-      this.frustumCulled = false;
-
-      this.point1 = new THREE.Vector3();
-      this.point2 = new THREE.Vector3();
-      this.localVector2 = new THREE.Vector3();
-      this.temp = [];
-      this.temp2 = [];
-      this.pos = new THREE.Vector3();
-      this.quat = new THREE.Quaternion();
-      this.quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-
-      this.lastEnabled = false;
-      this.lastTriggerStartTime = -Infinity;
-    }
-
-    update(enabled, matrixWorld) {
-      const now = performance.now();
-
-      // if (enabled && !this.lastEnabled) {
-      //   this.lastTriggerStartTime = now;
-      // }
-      // now -= this.lastTriggerStartTime;
-      // console.log(now);
-
-      if (now >= 10) {
-        this.material.uniforms.opacity.value = 1;
-      } else {
-        if (this.material.uniforms.opacity.value > 0) { this.material.uniforms.opacity.value -= 0.0255; }
-      }
-      if (now > 0 && now < 10) {
-        this.material.uniforms.opacity.value = 0;
-      }
-      if (this.material.uniforms.opacity.value > 0) {
-        // console.log('sonic-boom-horiPlane');
-
-        // this.localVector2.set(currentDir.x, currentDir.y, currentDir.z).applyQuaternion(this.quat);
-        localQuaternion.setFromRotationMatrix(matrixWorld);
-        // this.localVector2.set(0, 0, -1).applyQuaternion(localQuaternion).applyQuaternion(this.quat);
-        this.localVector2.set(this.isZ ? 0 : 0.3, 0, this.isZ ? 0.3 : 0).applyQuaternion(localQuaternion);
-        // this.localVector2.set(0, 0, 1).applyQuaternion(localQuaternion);
-        // this.localVector2.set(1, 0, 0);
-        this.pos.copy(this.b).applyMatrix4(matrixWorld);
-        // console.log(this.pos.toArray().map(n=>n.toFixed(2)).join(', '));
-
-        this.point1.x = this.pos.x;
-        this.point1.y = this.pos.y;
-        this.point1.z = this.pos.z;
-        this.point2.x = this.pos.x;
-        this.point2.y = this.pos.y;
-        this.point2.z = this.pos.z;
-
-        this.point1.x -= this.localVector2.x;
-        this.point1.y -= this.localVector2.y;
-        this.point1.z -= this.localVector2.z;
-        this.point2.x += this.localVector2.x;
-        this.point2.y += this.localVector2.y;
-        this.point2.z += this.localVector2.z;
-
-        for (let i = 0; i < 18; i++) {
-          this.temp[i] = this.positions[i];
-        }
-        for (let i = 0; i < this.planeNumber; i++) {
-          if (i === 0) {
-            this.positions[0] = this.point1.x;
-            this.positions[1] = this.point1.y;
-            this.positions[2] = this.point1.z;
-            this.positions[3] = this.point2.x;
-            this.positions[4] = this.point2.y;
-            this.positions[5] = this.point2.z;
-
-            this.positions[6] = this.temp[0];
-            this.positions[7] = this.temp[1];
-            this.positions[8] = this.temp[2];
-
-            this.positions[9] = this.temp[3];
-            this.positions[10] = this.temp[4];
-            this.positions[11] = this.temp[5];
-
-            this.positions[12] = this.temp[0];
-            this.positions[13] = this.temp[1];
-            this.positions[14] = this.temp[2];
-
-            this.positions[15] = this.point2.x;
-            this.positions[16] = this.point2.y;
-            this.positions[17] = this.point2.z;
-          } else {
-            for (let j = 0; j < 18; j++) {
-              this.temp2[j] = this.positions[i * 18 + j];
-              this.positions[i * 18 + j] = this.temp[j];
-              this.temp[j] = this.temp2[j];
-            }
-          }
-        }
-
-        this.geometry.verticesNeedUpdate = true;
-        this.geometry.dynamic = true;
-        this.geometry.attributes.position.needsUpdate = true;
-        this.material.uniforms.uTime.value = now / 1000;
-      }
-      this.lastEnabled = enabled;
-    }
-  }
-  let trailMesh = null;
-  let trailMesh2 = null;
-  const useComponent = components.find(component => component.key === 'use');
-  const trail = useComponent?.value.trail;
-  if (Array.isArray(trail)) {
+  // ########################################## horizontal trail ######################################
+  {
+    const useComponent = components.find(component => component.key === 'use');
+    const trail = useComponent?.value.trail;
     const a = new THREE.Vector3().fromArray(trail[0]);
     const b = new THREE.Vector3().fromArray(trail[1]);
-    trailMesh = new TrailMesh(a, b);
-    trailMesh2 = new TrailMesh(a, b, true);
-    window.trailMesh = trailMesh;
-    window.trailMesh2 = trailMesh2;
-    sceneLowPriority.add(trailMesh);
-    sceneLowPriority.add(trailMesh2);
+
+    const planeGeometry = new THREE.BufferGeometry();
+    const planeNumber = 100;
+    const position = new Float32Array(18 * planeNumber);
+    planeGeometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
+
+    const uv = new Float32Array(12 * planeNumber);
+    let fraction = 1;
+    const ratio = 1 / planeNumber;
+    for (let i = 0; i < planeNumber; i++) {
+      uv[i * 12 + 0] = 0;
+      uv[i * 12 + 1] = fraction;
+
+      uv[i * 12 + 2] = 1;
+      uv[i * 12 + 3] = fraction;
+
+      uv[i * 12 + 4] = 0;
+      uv[i * 12 + 5] = fraction - ratio;
+
+      uv[i * 12 + 6] = 1;
+      uv[i * 12 + 7] = fraction - ratio;
+
+      uv[i * 12 + 8] = 0;
+      uv[i * 12 + 9] = fraction - ratio;
+
+      uv[i * 12 + 10] = 1;
+      uv[i * 12 + 11] = fraction;
+
+      fraction -= ratio;
+    }
+    planeGeometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: {
+          value: 0,
+        },
+        opacity: {
+          value: 0,
+        },
+        textureR: {type: 't', value: textureR},
+        textureG: {type: 't', value: textureG},
+        textureB: {type: 't', value: textureB},
+        t: {value: 0.9},
+      },
+      vertexShader: `\
+        ${THREE.ShaderChunk.common}
+        ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
+        uniform float uTime;
+        varying vec2 vUv;
+        
+        void main() {
+          vUv=uv;
+          vUv.y*=1.0;
+          //vUv.x=1.-vUv.x;
+          vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+          vec4 viewPosition = viewMatrix * modelPosition;
+          vec4 projectionPosition = projectionMatrix * viewPosition;
+
+          gl_Position = projectionPosition;
+          ${THREE.ShaderChunk.logdepthbuf_vertex}
+        }
+      `,
+      fragmentShader: `\
+        ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
+        uniform sampler2D textureR;
+        uniform sampler2D textureG;
+        uniform sampler2D textureB;
+        uniform float uTime;
+        uniform float opacity;
+        varying vec2 vUv;
+        void main() {
+          vec3 texColorR = texture2D(
+            textureR,
+            vec2(
+              mod(1.*vUv.x+uTime*5.,1.),
+              mod(2.*vUv.y+uTime*5.,1.)
+            )
+          ).rgb;
+          vec3 texColorG = texture2D(
+            textureG,
+            vec2(
+              mod(1.*vUv.x+uTime*5.,1.),
+              mod(2.*vUv.y+uTime*5.,1.)
+            )
+          ).rgb;
+          vec3 texColorB = texture2D(
+            textureB,
+            vec2(
+              mod(1.*vUv.x,1.),
+              mod(2.5*vUv.y+uTime*2.5,1.)
+            )
+          ).rgb;
+          gl_FragColor = vec4(texColorB.b)*((vec4(texColorR.r)+vec4(texColorG.g))/2.);
+          
+          if( gl_FragColor.b >= 0.1 ){
+            gl_FragColor = vec4(mix(vec3(0.020, 0.180, 1.920),vec3(0.284, 0.922, 0.980),gl_FragColor.b),gl_FragColor.b);
+          }else{
+            gl_FragColor = vec4(0.);
+          }
+          gl_FragColor *= vec4(sin(vUv.y) - 0.1);
+          gl_FragColor *= vec4(smoothstep(0.3,0.628,vUv.y));
+          if(abs(vUv.x)>0.9 || abs(vUv.x)<0.1)
+            gl_FragColor.a=0.;
+          
+          gl_FragColor.a*=3.;
+          gl_FragColor.a*=opacity;
+            
+          //gl_FragColor = vec4(vec3(texColor), texColor.b);
+          //gl_FragColor.a*=(vUv.x)*5.;
+          //gl_FragColor = vec4(vUv, 1.0, 1.0);
+          // gl_FragColor = vec4(0,1,0,1);
+          ${THREE.ShaderChunk.logdepthbuf_fragment}
+        }
+      `,
+      side: THREE.DoubleSide,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+
+      clipping: false,
+      fog: false,
+      lights: false,
+    });
+    material.freeze();
+
+    const plane = new THREE.Mesh(planeGeometry, material);
+    plane.frustumCulled = false;
+    sceneLowPriority.add(plane);
+
+    const point1 = new THREE.Vector3();
+    const point2 = new THREE.Vector3();
+    const temp = [];
+    const temp2 = [];
+    const quaternion = new THREE.Quaternion();
+    quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+
+    useFrame(({timestamp}) => {
+      if (!subApp) return;
+
+      // const enabled = using;
+      const matrixWorld = subApp.matrixWorld;
+
+      if (timestamp >= 10) {
+        material.uniforms.opacity.value = 1;
+      } else {
+        if (material.uniforms.opacity.value > 0) { material.uniforms.opacity.value -= 0.0255; }
+      }
+      if (timestamp > 0 && timestamp < 10) {
+        material.uniforms.opacity.value = 0;
+      }
+      if (material.uniforms.opacity.value > 0) {
+        localQuaternion.setFromRotationMatrix(matrixWorld);
+        localVector2.set(0.3, 0, 0).applyQuaternion(localQuaternion);
+        localVector.copy(b).applyMatrix4(matrixWorld);
+
+        point1.x = localVector.x;
+        point1.y = localVector.y;
+        point1.z = localVector.z;
+        point2.x = localVector.x;
+        point2.y = localVector.y;
+        point2.z = localVector.z;
+
+        point1.x -= localVector2.x;
+        point1.y -= localVector2.y;
+        point1.z -= localVector2.z;
+        point2.x += localVector2.x;
+        point2.y += localVector2.y;
+        point2.z += localVector2.z;
+
+        for (let i = 0; i < 18; i++) {
+          temp[i] = position[i];
+        }
+        for (let i = 0; i < planeNumber; i++) {
+          if (i === 0) {
+            position[0] = point1.x;
+            position[1] = point1.y;
+            position[2] = point1.z;
+            position[3] = point2.x;
+            position[4] = point2.y;
+            position[5] = point2.z;
+
+            position[6] = temp[0];
+            position[7] = temp[1];
+            position[8] = temp[2];
+
+            position[9] = temp[3];
+            position[10] = temp[4];
+            position[11] = temp[5];
+
+            position[12] = temp[0];
+            position[13] = temp[1];
+            position[14] = temp[2];
+
+            position[15] = point2.x;
+            position[16] = point2.y;
+            position[17] = point2.z;
+          } else {
+            for (let j = 0; j < 18; j++) {
+              temp2[j] = position[i * 18 + j];
+              position[i * 18 + j] = temp[j];
+              temp[j] = temp2[j];
+            }
+          }
+        }
+
+        planeGeometry.verticesNeedUpdate = true;
+        planeGeometry.dynamic = true;
+        planeGeometry.attributes.position.needsUpdate = true;
+        material.uniforms.uTime.value = timestamp / 1000;
+      }
+    });
   }
 
   // ################################################# front wave #################################################
@@ -875,7 +846,6 @@ export default e => {
       if (timestamp > 10) {
         // console.log('sonic-boom-frontwave');
         if (!sonicBoomInApp) {
-          debugger
           // console.log('add-frontWave');
           sceneLowPriority.add(group);
           sonicBoomInApp = true;
@@ -1009,10 +979,10 @@ export default e => {
       }
     } */
 
-    if (trailMesh && subApp) {
-      trailMesh.update(using, subApp.matrixWorld);
-      trailMesh2.update(using, subApp.matrixWorld);
-    }
+    // if (trailMesh && subApp) {
+    //   trailMesh.update(using, subApp.matrixWorld);
+    //   trailMesh2.update(using, subApp.matrixWorld);
+    // }
     if (decalMesh) {
       // const localPlayer = useLocalPlayer();
       if (subApp && localPlayer.avatar) {
@@ -1024,8 +994,8 @@ export default e => {
   });
 
   useCleanup(() => {
-    trailMesh && sceneLowPriority.remove(trailMesh);
-    trailMesh2 && sceneLowPriority.remove(trailMesh2);
+    // trailMesh && sceneLowPriority.remove(trailMesh);
+    // trailMesh2 && sceneLowPriority.remove(trailMesh2);
     decalMesh && scene.remove(decalMesh);
     subApp && subApp.destroy();
   });
