@@ -557,7 +557,7 @@ export default e => {
           //gl_FragColor = vec4(vec3(texColor), texColor.b);
           //gl_FragColor.a*=(vUv.x)*5.;
           //gl_FragColor = vec4(vUv, 1.0, 1.0);
-          gl_FragColor = vec4(1,0,0,1);
+          // gl_FragColor = vec4(1,0,0,1);
           ${THREE.ShaderChunk.logdepthbuf_fragment}
         }
       `,
@@ -587,14 +587,15 @@ export default e => {
       // const enabled = using;
       const matrixWorld = trailDirObj.matrixWorld;
 
-      if (timestamp >= 10) {
+      const localPlayer = useLocalPlayer();
+      const useAction = localPlayer.getAction('use');
+
+      if (localPlayer.avatar.useTime > 0 && useAction.index < 4) {
         material.uniforms.opacity.value = 1;
       } else {
         if (material.uniforms.opacity.value > 0) { material.uniforms.opacity.value -= 0.0255; }
       }
-      if (timestamp > 0 && timestamp < 10) {
-        material.uniforms.opacity.value = 0;
-      }
+
       if (material.uniforms.opacity.value > 0) {
         localQuaternion.setFromRotationMatrix(matrixWorld);
         localVector2.set(0.3, 0, 0).applyQuaternion(localQuaternion);
@@ -770,7 +771,7 @@ export default e => {
           //gl_FragColor = vec4(vec3(texColor), texColor.b);
           //gl_FragColor.a*=(vUv.x)*5.;
           //gl_FragColor = vec4(vUv, 1.0, 1.0);
-          gl_FragColor = vec4(0,1,0,1);
+          // gl_FragColor = vec4(0,1,0,1);
           ${THREE.ShaderChunk.logdepthbuf_fragment}
         }
       `,
@@ -800,14 +801,15 @@ export default e => {
       // const enabled = using;
       const matrixWorld = trailDirObj.matrixWorld;
 
-      if (timestamp >= 10) {
+      const localPlayer = useLocalPlayer();
+      const useAction = localPlayer.getAction('use');
+
+      if (localPlayer.avatar.useTime > 0 && useAction.index < 4) {
         material.uniforms.opacity.value = 1;
       } else {
         if (material.uniforms.opacity.value > 0) { material.uniforms.opacity.value -= 0.0255; }
       }
-      if (timestamp > 0 && timestamp < 10) {
-        material.uniforms.opacity.value = 0;
-      }
+
       if (material.uniforms.opacity.value > 0) {
         localQuaternion.setFromRotationMatrix(matrixWorld);
         localVector2.set(0, 0.3, 0).applyQuaternion(localQuaternion);
@@ -1065,46 +1067,28 @@ export default e => {
     frontwave2.position.y = 0;
     frontwave2.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0), -90 * Math.PI / 180);
 
-    const group = new THREE.Group();
-    group.add(frontwave);
-    group.add(frontwave2);
-    // app.add(group);
+    sceneLowPriority.add(frontwave);
+    sceneLowPriority.add(frontwave2);
 
-    let sonicBoomInApp = false;
     useFrame(({timestamp}) => {
-      if (timestamp > 10) {
-        // console.log('sonic-boom-frontwave');
-        if (!sonicBoomInApp) {
-          // console.log('add-frontWave');
-          sceneLowPriority.add(group);
-          sonicBoomInApp = true;
-        }
+      const useAction = useLocalPlayer().getAction('use');
+      if (useAction?.index === 4) {
+        frontwave.visible = true;
+        frontwave2.visible = true;
 
-        // group.position.copy(localPlayer.position);
-        // group.rotation.copy(localPlayer.rotation);
-
-        // group.position.x -= 0.6 * currentDir.x;
-        // group.position.z -= 0.6 * currentDir.z;
-
-        group.scale.set(1, 1, 1);
         material.uniforms.uTime.value = timestamp / 5000;
         material2.uniforms.uTime.value = timestamp / 10000;
+
+        frontwave.matrixWorld.copy(subApp.matrixWorld);
+        frontwave2.matrixWorld.copy(subApp.matrixWorld);
       } else {
-        if (sonicBoomInApp) {
-          // console.log('remove-frontWave');
-          app.remove(group);
-          sonicBoomInApp = false;
-        }
-        // group.scale.set(0,0,0);
+        frontwave.visible = false;
+        frontwave2.visible = false;
       }
-
-      // material.uniforms.strength.value=Math.sin(timestamp/1000);
-      // material2.uniforms.strength.value=Math.sin(timestamp/1000);
-
-      // material2.uniforms.iResolution.value.set(window.innerWidth, window.innerHeight, 1);
-      // app.updateMatrixWorld();
     });
   }
+
+  // ##########################################  ######################################
 
   let subApp = null;
   e.waitUntil((async () => {
