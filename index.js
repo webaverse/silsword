@@ -592,6 +592,7 @@ export default e => {
       const matrixWorld = trailDirObj.matrixWorld;
 
       const localPlayer = useLocalPlayer();
+      if (!localPlayer.avatar) return;
       const useAction = localPlayer.getAction('use');
 
       const enabled = localPlayer.avatar.useTime > 0 && useAction.index < 4;
