@@ -115,7 +115,7 @@ export default e => {
           value: 0,
         },
         opacity: {
-          value: 0,
+          value: 1,
         },
         textureR: {type: 't', value: textureR},
         textureG: {type: 't', value: textureG},
@@ -197,7 +197,7 @@ export default e => {
       side: THREE.DoubleSide,
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      // blending: THREE.AdditiveBlending,
 
       clipping: false,
       fog: false,
@@ -228,11 +228,11 @@ export default e => {
 
       const enabled = localPlayer.avatar.useTime > 0 && useAction.index < 4;
 
-      if (enabled) {
-        material.uniforms.opacity.value = 1;
-      } else {
-        if (material.uniforms.opacity.value > 0) { material.uniforms.opacity.value -= 0.0255; }
-      }
+      // if (enabled) {
+      //   material.uniforms.opacity.value = 1;
+      // } else {
+      //   if (material.uniforms.opacity.value > 0) { material.uniforms.opacity.value -= 0.0255; }
+      // }
 
       if (enabled && !lastEnabled) { // reset vertices
         point1.copy(a).applyMatrix4(matrixWorld);
@@ -269,7 +269,7 @@ export default e => {
         planeGeometry.attributes.position.needsUpdate = true;
       }
 
-      if (material.uniforms.opacity.value > 0) {
+      if (enabled) {
         point1.copy(a).applyMatrix4(matrixWorld);
         point2.copy(b).applyMatrix4(matrixWorld);
 
