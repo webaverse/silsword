@@ -70,29 +70,12 @@ export default e => {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
 
-  const trailDirObj = new THREE.Object3D();
-  window.trailDirObj = trailDirObj;
+  const useComponent = components.find(component => component.key === 'use');
+  const trail = useComponent?.value.trail;
+  const a = new THREE.Vector3().fromArray(trail[0]);
+  const b = new THREE.Vector3().fromArray(trail[1]);
 
-  const preprocessTrails = () => {
-    const useComponent = components.find(component => component.key === 'use');
-    const trail = useComponent?.value.trail;
-    const a = new THREE.Vector3().fromArray(trail[0]);
-    const b = new THREE.Vector3().fromArray(trail[1]);
-
-    const lastPosition = new THREE.Vector3();
-    useFrame(({timestamp}) => {
-      if (!subApp) return;
-
-      trailDirObj.position.copy(b).applyMatrix4(subApp.matrixWorld);
-      if (!trailDirObj.position.equals(lastPosition)) {
-        trailDirObj.lookAt(lastPosition);
-      }
-      trailDirObj.updateMatrixWorld();
-
-      lastPosition.copy(trailDirObj.position);
-    });
-  };
-  preprocessTrails();
+  const lastPosition = new THREE.Vector3();
 
   const makeVerticleTrail = () => {
     const planeGeometry = new THREE.BufferGeometry();
@@ -206,6 +189,8 @@ export default e => {
           //gl_FragColor.a*=(vUv.x)*5.;
           //gl_FragColor = vec4(vUv, 1.0, 1.0);
           // gl_FragColor = vec4(0,1,0,1);
+          // gl_FragColor = vec4(vUv,0,1);
+          gl_FragColor = vec4(0,vUv.y,0,1);
           ${THREE.ShaderChunk.logdepthbuf_fragment}
         }
       `,
@@ -235,7 +220,7 @@ export default e => {
       if (!subApp) return;
 
       // const enabled = using;
-      const matrixWorld = trailDirObj.matrixWorld;
+      const matrixWorld = subApp.matrixWorld;
 
       const localPlayer = useLocalPlayer();
       if (!localPlayer.avatar) return;
@@ -250,30 +235,33 @@ export default e => {
       }
 
       if (enabled && !lastEnabled) { // reset vertices
-        localVector.copy(trailDirObj.position);
+        point1.copy(a).applyMatrix4(matrixWorld);
+        point2.copy(b).applyMatrix4(matrixWorld);
         for (let i = 0; i < planeNumber; i++) {
-          position[i * 18 + 0] = localVector.x;
-          position[i * 18 + 1] = localVector.y;
-          position[i * 18 + 2] = localVector.z;
-          position[i * 18 + 3] = localVector.x;
-          position[i * 18 + 4] = localVector.y;
-          position[i * 18 + 5] = localVector.z;
+          position[i * 18 + 0] = point1.x;
+          position[i * 18 + 1] = point1.y;
+          position[i * 18 + 2] = point1.z;
 
-          position[i * 18 + 6] = localVector.x;
-          position[i * 18 + 7] = localVector.y;
-          position[i * 18 + 8] = localVector.z;
+          position[i * 18 + 3] = point2.x;
+          position[i * 18 + 4] = point2.y;
+          position[i * 18 + 5] = point2.z;
 
-          position[i * 18 + 9] = localVector.x;
-          position[i * 18 + 10] = localVector.y;
-          position[i * 18 + 11] = localVector.z;
+          position[i * 18 + 6] = point1.x;
+          position[i * 18 + 7] = point1.y;
+          position[i * 18 + 8] = point1.z;
 
-          position[i * 18 + 12] = localVector.x;
-          position[i * 18 + 13] = localVector.y;
-          position[i * 18 + 14] = localVector.z;
+          
+          position[i * 18 + 9] = point2.x;
+          position[i * 18 + 10] = point2.y;
+          position[i * 18 + 11] = point2.z;
 
-          position[i * 18 + 15] = localVector.x;
-          position[i * 18 + 16] = localVector.y;
-          position[i * 18 + 17] = localVector.z;
+          position[i * 18 + 12] = point1.x;
+          position[i * 18 + 13] = point1.y;
+          position[i * 18 + 14] = point1.z;
+
+          position[i * 18 + 15] = point2.x;
+          position[i * 18 + 16] = point2.y;
+          position[i * 18 + 17] = point2.z;
         }
 
         planeGeometry.verticesNeedUpdate = true;
@@ -282,23 +270,8 @@ export default e => {
       }
 
       if (material.uniforms.opacity.value > 0) {
-        localQuaternion.setFromRotationMatrix(matrixWorld);
-        localVector2.set(0, 0.3, 0).applyQuaternion(localQuaternion);
-        localVector.set(0, 0, 0).applyMatrix4(matrixWorld);
-
-        point1.x = localVector.x;
-        point1.y = localVector.y;
-        point1.z = localVector.z;
-        point2.x = localVector.x;
-        point2.y = localVector.y;
-        point2.z = localVector.z;
-
-        point1.x -= localVector2.x;
-        point1.y -= localVector2.y;
-        point1.z -= localVector2.z;
-        point2.x += localVector2.x;
-        point2.y += localVector2.y;
-        point2.z += localVector2.z;
+        point1.copy(a).applyMatrix4(matrixWorld);
+        point2.copy(b).applyMatrix4(matrixWorld);
 
         for (let i = 0; i < 18; i++) {
           temp[i] = position[i];
@@ -308,6 +281,7 @@ export default e => {
             position[0] = point1.x;
             position[1] = point1.y;
             position[2] = point1.z;
+
             position[3] = point2.x;
             position[4] = point2.y;
             position[5] = point2.z;
@@ -315,6 +289,7 @@ export default e => {
             position[6] = temp[0];
             position[7] = temp[1];
             position[8] = temp[2];
+
 
             position[9] = temp[3];
             position[10] = temp[4];
