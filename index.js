@@ -421,6 +421,35 @@ export default e => {
       const positions = new Float32Array(6*3*numPositions);
       const positionAttribute = new THREE.BufferAttribute(positions, 3);
       geometry.setAttribute('position', positionAttribute);
+      const uv = new Float32Array(6*2*numPositions);
+      let fraction = 1;
+      let ratio = fraction / numPositions;
+      for (let i = 0; i < numPositions; i++) {
+          uv[i * 12 + 0] = 0;
+          uv[i * 12 + 1] = fraction - ratio;
+  
+          uv[i * 12 + 2] = 1;
+          uv[i * 12 + 3] = fraction - ratio;
+  
+          uv[i * 12 + 4] = 1;
+          uv[i * 12 + 5] = fraction;
+  
+          uv[i * 12 + 6] = 0;
+          uv[i * 12 + 7] = fraction - ratio;
+  
+          uv[i * 12 + 8] = 1;
+          uv[i * 12 + 9] = fraction;
+  
+          uv[i * 12 + 10] = 0;
+          uv[i * 12 + 11] = fraction;
+
+          
+  
+          fraction -= ratio;
+  
+      }
+      const uvAttribute = new THREE.BufferAttribute(uv, 2);
+      geometry.setAttribute('uv', uvAttribute);
       const ts = new Float32Array(positions.length/3);
       const tAttribute = new THREE.BufferAttribute(ts, 1);
       geometry.setAttribute('t', tAttribute);
@@ -433,6 +462,7 @@ export default e => {
         uniform float uTime;
         attribute float t;
         varying float vT;
+        varying vec2 vUv;
 
         /* mat4 rotationMatrix(vec3 axis, float angle)
         {
@@ -457,6 +487,8 @@ export default e => {
           // vec3 p = position;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.);
           vT = t;
+          vUv = uv;
+          vUv.y = 1. - (vUv.y - 0.9) * 10.;
           ${THREE.ShaderChunk.logdepthbuf_vertex}
         }
       `;
@@ -470,12 +502,13 @@ export default e => {
         
         // vec3 grey = vec3(0.5);
         vec3 grey = vec3(0.7);
+        varying vec2 vUv;
         ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
 
         void main() {
           float f = 1. - pow((uTime - vT)/100., 0.1);
           if (f >= 0.) {
-            gl_FragColor = vec4(grey, f);
+            gl_FragColor = vec4( 0., vUv.y, 0., 1.0);
           } else {
             discard;
           }
