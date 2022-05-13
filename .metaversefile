@@ -38,8 +38,7 @@
           "swordSideSlash",
           "swordSideSlashStep",
           "swordTopDownSlash",
-          "swordTopDownSlashStep",
-          "swordUpSlash"
+          "swordTopDownSlashStep"
         ],
         "behavior": "sword",
         "boneAttachment": "leftHand",
