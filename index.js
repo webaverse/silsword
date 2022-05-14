@@ -67,6 +67,7 @@ export default e => {
   const textureB = textureLoader.load(baseUrl + 'textures/b.jpg');
   const wave2 = textureLoader.load(baseUrl + 'textures/wave2.jpeg');
   const wave20 = textureLoader.load(baseUrl + 'textures/wave20.png');
+  const textureUvGrid = textureLoader.load(baseUrl + 'textures/uv_grid_opengl.jpg');
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
 
@@ -120,6 +121,7 @@ export default e => {
         textureR: {type: 't', value: textureR},
         textureG: {type: 't', value: textureG},
         textureB: {type: 't', value: textureB},
+        textureUvGrid: {type: 't', value: textureUvGrid},
         t: {value: 0.9},
       },
       vertexShader: `\
@@ -145,6 +147,7 @@ export default e => {
         uniform sampler2D textureR;
         uniform sampler2D textureG;
         uniform sampler2D textureB;
+        uniform sampler2D textureUvGrid;
         uniform float uTime;
         uniform float opacity;
         varying vec2 vUv;
@@ -190,7 +193,8 @@ export default e => {
           //gl_FragColor = vec4(vUv, 1.0, 1.0);
           // gl_FragColor = vec4(0,1,0,1);
           // gl_FragColor = vec4(vUv,0,1);
-          gl_FragColor = vec4(0,vUv.y,0,1);
+          // gl_FragColor = vec4(0,vUv.y,0,1);
+          gl_FragColor = texture2D(textureUvGrid, vUv);
           ${THREE.ShaderChunk.logdepthbuf_fragment}
         }
       `,
