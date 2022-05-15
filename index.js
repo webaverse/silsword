@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 // import Simplex from './simplex-noise.js';
 import metaversefile from 'metaversefile';
-const {useApp, useFrame, useScene, useInternals, useLocalPlayer, useActivate, useUse, useWear, usePhysics, getAppByPhysicsId, useCleanup, useSound} = metaversefile;
+const {useApp, useFrame, useScene, useInternals, useLocalPlayer, useLoaders, useUse, useWear, usePhysics, getAppByPhysicsId, useCleanup, useSound} = metaversefile;
 
 const baseUrl = import.meta.url.replace(/(\/)[^\/\\]*$/, '$1');
 
@@ -12,11 +12,25 @@ const localVector4 = new THREE.Vector3();
 const localVector5 = new THREE.Vector3();
 const localVector6 = new THREE.Vector3();
 const localVector7 = new THREE.Vector3();
+const localVector8 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localQuaternion2 = new THREE.Quaternion();
 const localQuaternion3 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localLine = new THREE.Line3();
+
+
+const textureLoader = new THREE.TextureLoader()
+const maskTexture = textureLoader.load(`${baseUrl}/textures/mask.png`);
+const voronoiNoiseTexture = textureLoader.load(`${baseUrl}/textures/voronoiNoise.jpg`);
+const hitTexture = textureLoader.load(`${baseUrl}/textures/hit.png`);
+
+
+let slashEnabled = false;
+let collisionPoint = new THREE.Vector3(0,0,0);
+let alreadyPlaycollision = true;
+
+
 
 const _makeSwordTransform = () => {
   return {
@@ -55,6 +69,11 @@ export default e => {
   const maxNumDecals = 128;
   const normalScale = 0.05;
   const numSegments = 128;
+  let currentDecalNum = 0;
+  let collisionTime = [];
+  for(let i = 0; i < maxNumDecals*numSegments; i++){
+    collisionTime[i] = -1;
+  }
   const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, 1)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
     .applyMatrix4(new THREE.Matrix4().makeTranslation(0, -0.5, 0))
@@ -65,10 +84,12 @@ export default e => {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   const decalMaterial = new THREE.MeshBasicMaterial({
-    color: 0xFF0000,
+    color: new THREE.Color( 0x010101 ),
     map: texture,
     side: THREE.DoubleSide,
-    // transparent: true,
+    transparent: true,
+    //blending: THREE.AdditiveBlending,
+    opacity:0.7
   });
   // decalMaterial.freeze();
 
@@ -103,7 +124,7 @@ export default e => {
     decalMesh.offset = 0;
     let lastHitPoint = null;
     const width = 0.2;
-    const thickness = 0.05;
+    const thickness = 0.018;
     decalMesh.update = (using, matrixWorldSword, matrixWorldShoulder) => {
       const _getCurrentSwordTransform = swordTransform => {
         matrixWorldSword.decompose(localVector, localQuaternion, localVector2);
@@ -349,7 +370,8 @@ export default e => {
     };
     const updateRanges = [];
     decalMesh.mergeGeometries = localDecalGeometies => {
-      if (localDecalGeometies.length > 0) {
+      if (localDecalGeometies.length > 0 && slashEnabled && !alreadyPlaycollision) {
+        
         const _makeUpdateRange = () => ({
           position: {
             offset: decalMesh.offset*3,
@@ -378,6 +400,9 @@ export default e => {
             decalMesh.geometry.attributes.normal.setXYZ( i + startOffset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i) );
             // decalMesh.geometry.index.setX( i + offset, localDecalGeometry.index.getX(i) );
           }
+          collisionPoint.x =  decalMesh.geometry.attributes.position.getX(Math.floor(Math.random() * (localDecalGeometry.attributes.position.count)) - 1  + startOffset);
+          collisionPoint.y =  decalMesh.geometry.attributes.position.getY(Math.floor(Math.random() * (localDecalGeometry.attributes.position.count)) - 1  + startOffset);
+          collisionPoint.z =  decalMesh.geometry.attributes.position.getZ(Math.floor(Math.random() * (localDecalGeometry.attributes.position.count)) - 1  + startOffset);
 
           // flag geometry attributes for update
           if (!updateRange) {
@@ -388,6 +413,9 @@ export default e => {
           updateRange.uv.count += localDecalGeometry.attributes.uv.count*2;
           updateRange.normal.count += localDecalGeometry.attributes.normal.count*3;
 
+          currentDecalNum++;
+          collisionTime[decalMesh.offset/(planeGeometry.attributes.position.array.length/3)]=performance.now();
+
           // update geometry attribute offset
           decalMesh.offset += localDecalGeometry.attributes.position.count;
           if (decalMesh.offset >= decalMesh.geometry.attributes.position.count) {
@@ -395,6 +423,7 @@ export default e => {
             updateRange = null;
           }
         }
+        alreadyPlaycollision = true;
       }
     };
     decalMesh.pushGeometryUpdate = () => {
@@ -617,6 +646,342 @@ export default e => {
     trailMesh = new TrailMesh(a, b);
     sceneLowPriority.add(trailMesh);
   }
+  
+  //######################################################################## hit animation #############################################################################
+  const hitGroup = new THREE.Group();
+  const hitGeometry = new THREE.PlaneGeometry( 2, 2 );
+  const hitMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+          uTime: {
+              value: 0,
+          },
+          uOpacity: {
+              value: 0
+          },
+          hitTexture: {
+              value: hitTexture
+          },
+          cameraQuaternion: {
+              value: new THREE.Quaternion(),
+          },
+          offset: {
+              value: new THREE.Vector2(0, 0.75),
+          },
+          
+      },
+      vertexShader: `\
+          
+          ${THREE.ShaderChunk.common}
+          ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
+      
+      
+          uniform float uTime;
+          uniform vec4 cameraQuaternion;
+  
+          varying vec2 vUv;
+          varying vec3 vPos;
+          
+          vec3 rotateVecQuat(vec3 position, vec4 q) {
+              vec3 v = position.xyz;
+              return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+          }
+          void main() {
+              vUv=uv;
+              vPos=position;
+  
+              vec3 pos = position;
+              //pos = rotateVecQuat(pos, cameraQuaternion);
+  
+              vec4 modelPosition = modelMatrix * vec4(pos, 1.0);
+              vec4 viewPosition = viewMatrix * modelPosition;
+              vec4 projectionPosition = projectionMatrix * viewPosition;
+      
+              gl_Position = projectionPosition;
+              ${THREE.ShaderChunk.logdepthbuf_vertex}
+          }
+      `,
+      fragmentShader: `\
+          ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
+          uniform float uTime;
+          uniform float uOpacity;
+          uniform vec2 offset;
+          
+          
+          
+          varying vec2 vUv;
+          varying vec3 vPos;
+          
+          uniform sampler2D hitTexture;
+              
+          void main() {  
+              
+              vec4 hit = texture2D(
+                              hitTexture,
+                              vec2(
+                                  vUv.x / 4. + offset.x,
+                                  vUv.y / 4. + offset.y
+                              )
+              );
+              gl_FragColor = hit * vec4(0.970, 0.484, 0.0291, 1.0) * 1.2;
+            ${THREE.ShaderChunk.logdepthbuf_fragment}
+          }
+      `,
+      side: THREE.DoubleSide,
+      transparent: true,
+      depthWrite: false,
+      //depthTest: false,
+      blending: THREE.AdditiveBlending,
+      
+  });
+  const hitAnimationMesh = new THREE.Mesh( hitGeometry, hitMaterial );
+  hitGroup.add(hitAnimationMesh);
+  sceneLowPriority.add(hitGroup);
+
+  const playHitAnimation = (offset)=>{
+    if(offset === 0){
+      hitAnimationMesh.rotation.z = Math.random() * 2 * Math.PI;
+    }
+    if(offset < 16){
+      hitMaterial.uniforms.offset.value.x = (offset % 4) *0.25;
+      hitMaterial.uniforms.offset.value.y = 0.75 - Math.floor(offset / 4) * 0.25;
+    }
+    else{
+      hitMaterial.uniforms.offset.value.x = 0;
+      hitMaterial.uniforms.offset.value.y = 0.75;
+    }
+    hitAnimationMesh.scale.set(1 + offset / 15, 1 + offset / 15, 1 + offset / 15);
+    //hitMaterial.uniforms.cameraQuaternion.value.copy(camera.quaternion);
+  }
+  
+  
+  //######################################################################## Slash ######################################################################################
+  
+  const particleCount = 2;
+  //##################################################### get geometry #####################################################
+  const _getSlashGeometry = geometry => {
+      const geometry2 = new THREE.BufferGeometry();
+      ['position', 'normal', 'uv'].forEach(k => {
+          geometry2.setAttribute(k, geometry.attributes[k]);
+      });
+      geometry2.setIndex(geometry.index);
+      
+      const positions = new Float32Array(particleCount * 3);
+      const positionsAttribute = new THREE.InstancedBufferAttribute(positions, 3);
+      geometry2.setAttribute('positions', positionsAttribute);
+      // const quaternions = new Float32Array(particleCount * 4);
+      // for (let i = 0; i < particleCount; i++) {
+      //   identityQuaternion.toArray(quaternions, i * 4);
+      // }
+      // const quaternionsAttribute = new THREE.InstancedBufferAttribute(quaternions, 4);
+      // geometry2.setAttribute('quaternions', quaternionsAttribute);
+
+      
+      const scalesAttribute = new THREE.InstancedBufferAttribute(new Float32Array(particleCount), 1);
+      scalesAttribute.setUsage(THREE.DynamicDrawUsage);
+      geometry2.setAttribute('scales', scalesAttribute);
+
+      const mask = new Float32Array(particleCount);
+      const maskAttribute = new THREE.InstancedBufferAttribute(mask, 1);
+      geometry2.setAttribute('mask', maskAttribute);
+
+      const voronoiPower = new Float32Array(particleCount);
+      const voronoiPowerAttribute = new THREE.InstancedBufferAttribute(voronoiPower, 1);
+      geometry2.setAttribute('voronoiPower', voronoiPowerAttribute);
+
+      // const opacity = new Float32Array(particleCount);
+      // const opacityAttribute = new THREE.InstancedBufferAttribute(opacity, 1);
+      // geometry2.setAttribute('opacity', opacityAttribute);
+
+      const id = new Float32Array(particleCount);
+      const idAttribute = new THREE.InstancedBufferAttribute(id, 1);
+      geometry2.setAttribute('id', idAttribute);
+  
+      return geometry2;
+  };
+  //##################################################### slash material #####################################################
+  const slashMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+        uTime: {
+            value: 0,
+        },
+        maskTexture: {
+            value: maskTexture
+        },
+        voronoiNoiseTexture: {
+            value: voronoiNoiseTexture
+        },
+        voronoiPower: {
+            value: 2.5
+        },
+        uOpacity: {
+            value: 0
+        },
+        slashQuaternion: {
+            value: new THREE.Quaternion(),
+        },
+        
+    },
+    vertexShader: `\
+        
+        ${THREE.ShaderChunk.common}
+        ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
+    
+    
+        uniform float uTime;
+        uniform vec4 slashQuaternion;
+
+        varying vec2 vUv;
+        varying vec3 vPos;
+        varying float vId;
+        varying float vVoronoiPower;
+
+        attribute float voronoiPower;
+        attribute vec3 positions;
+        attribute float scales;
+        attribute float id;
+        vec3 rotateVecQuat(vec3 position, vec4 q) {
+            vec3 v = position.xyz;
+            return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+        }
+        void main() {
+            vUv=uv;
+            vId = id;
+            vPos=position;
+            vVoronoiPower = voronoiPower;
+
+            vec3 pos = position;
+            pos = rotateVecQuat(pos, slashQuaternion);
+            pos*=scales;
+            pos+=positions;
+
+            vec4 modelPosition = modelMatrix * vec4(pos, 1.0);
+            vec4 viewPosition = viewMatrix * modelPosition;
+            vec4 projectionPosition = projectionMatrix * viewPosition;
+    
+            gl_Position = projectionPosition;
+            ${THREE.ShaderChunk.logdepthbuf_vertex}
+        }
+    `,
+    fragmentShader: `\
+        ${THREE.ShaderChunk.logdepthbuf_pars_fragment}
+        uniform float uTime;
+        uniform float uOpacity;
+        
+        
+        
+        varying vec2 vUv;
+        varying vec3 vPos;
+        varying float vId;
+        varying float vVoronoiPower;
+        
+        uniform sampler2D maskTexture;
+        uniform sampler2D voronoiNoiseTexture;
+            
+        void main() {  
+            if(vId<0.5){
+              vec4 mask = texture2D(
+                                maskTexture,
+                                vUv
+              );
+              vec4 voronoiNoise = texture2D(
+                                voronoiNoiseTexture,
+                                vec2(
+                                    vUv.x,
+                                    mod(vUv.y * 2. - uTime * 2.,1.0)
+                                )
+              );
+              voronoiNoise = vec4(pow(voronoiNoise.r, vVoronoiPower), pow(voronoiNoise.g, vVoronoiPower), pow(voronoiNoise.b, vVoronoiPower), pow(voronoiNoise.a, 1.));
+              float powNum2 = 4.;
+              mask = vec4(pow(mask.r, powNum2), pow(mask.g, powNum2), pow(mask.b, powNum2), pow(mask.a, 1.));
+              gl_FragColor = voronoiNoise * mask * vec4(0.0490, 0.127, 0.980, voronoiNoise.r * voronoiNoise.r);
+              if(vVoronoiPower < 2.5){
+                gl_FragColor.rgb *= (10.+ vUv.y) * voronoiNoise.r * voronoiNoise.r;
+              }
+            }
+            else{
+              vec4 mask = texture2D(
+                                maskTexture,
+                                vUv
+              );
+              vec4 voronoiNoise = texture2D(
+                                voronoiNoiseTexture,
+                                vec2(
+                                    vUv.x,
+                                    mod(vUv.y * 1.2 - uTime * 2.,1.0)
+                                )
+              );
+              voronoiNoise = vec4(pow(voronoiNoise.r, vVoronoiPower), pow(voronoiNoise.g, vVoronoiPower), pow(voronoiNoise.b, vVoronoiPower), pow(voronoiNoise.a, 1.));
+              float powNum2 = 2.;
+              mask = vec4(pow(mask.r, powNum2), pow(mask.g, powNum2), pow(mask.b, powNum2), pow(mask.a, 1.));
+              gl_FragColor = voronoiNoise * mask * vec4(0.970, 0.256, 0.0388, voronoiNoise.r);
+              //gl_FragColor.a = 0.;
+              if(vVoronoiPower < 5.5){
+                gl_FragColor.rgb *= (10.+ vUv.y) * voronoiNoise.r * voronoiNoise.r;
+              }
+            }
+            
+            // if(gl_FragColor.a < 0.1){
+            //     discard;
+            // }
+            
+            gl_FragColor *= 5. + vUv.y;
+            gl_FragColor *= 2.;
+            
+            gl_FragColor.a *= uOpacity;
+          
+          ${THREE.ShaderChunk.logdepthbuf_fragment}
+        }
+    `,
+    //side: THREE.DoubleSide,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    
+  });
+
+  //######################################################## initial instanced mesh #################################################################
+  let slashMesh=null;
+  let group = new THREE.Group();
+  (async () => {
+      const u = `${baseUrl}/assets/slash.glb`;
+      const slashApp = await new Promise((accept, reject) => {
+          const {gltfLoader} = useLoaders();
+          gltfLoader.load(u, accept, function onprogress() {}, reject);
+          
+      });
+      slashApp.scene.traverse(o => {
+          if (o.isMesh) {
+              addInstancedMesh(o.geometry);
+          }
+      });
+      
+  })();
+
+  const addInstancedMesh=(geometry2)=>{
+      const geometry =_getSlashGeometry(geometry2)
+      slashMesh = new THREE.InstancedMesh(
+          geometry,
+          slashMaterial,
+          particleCount
+      );
+      const scalessAttribute = slashMesh.geometry.getAttribute('scales');
+      const idAttribute = slashMesh.geometry.getAttribute('id');
+      
+      idAttribute.setX(0,0);
+      idAttribute.setX(1,1);
+      scalessAttribute.setX(0 , 0.65);
+      scalessAttribute.setX(1 , 0.65);
+
+      scalessAttribute.needsUpdate = true;
+      idAttribute.needsUpdate = true;
+
+      group.add(slashMesh);
+      group.rotation.x = Math.PI / 2;
+      
+      app.add(group);
+  }
+
+
 
   let subApp = null;
   e.waitUntil((async () => {
@@ -679,18 +1044,41 @@ export default e => {
     'swordTopDownSlash':100,
     'swordTopDownSlashStep':150
   }
+
+  let slashDelay={
+    'swordSideSlash':{start: 500, duration: 50},
+    'swordSideSlashStep':{start: 250, duration: 100},
+    'swordTopDownSlash':{start: 250, duration: 100},
+    'swordTopDownSlashStep':{start: 300, duration: 80},
+  }
   let startAnimationTime=0;
   let playSoundSw=false;
   let lastPlaySoundAnimationIndex = null;
-  useFrame(() => {
+
+  let startSlashTime = -1;
+  let rotYVecator = new THREE.Vector3( 0, 1, 0 );
+  let quaternion = new THREE.Quaternion();
+  let playSlash=false;
+  let lastAnimation = null;
+  let startSlashAnimationTime = 0;
+  let slashRotation = Math.PI / 2;
+
+  let hitOffset = 16;
+
+  let positionAttributeLength = planeGeometry.attributes.position.array.length/3;
+  let preIndex = -1;
+  
+  useFrame(({timestamp}) => {
+    
     const localPlayer = useLocalPlayer();
     if(localPlayer.avatar && wearing){
       if(localPlayer.avatar.useAnimationIndex >= 0 && localPlayer.avatar.useAnimationIndex !== lastPlaySoundAnimationIndex){
         if(startAnimationTime===0){
           startAnimationTime=performance.now();
         }
+        
         if(
-          performance.now()-startAnimationTime>=animationOffset[localPlayer.avatar.useAnimationCombo[localPlayer.avatar.useAnimationIndex]]
+          performance.now() - startAnimationTime >= animationOffset[localPlayer.avatar.useAnimationCombo[localPlayer.avatar.useAnimationIndex]]
           && !playSoundSw
         ){
           const indexOfSlash=localPlayer.avatar.useAnimationIndex;
@@ -699,12 +1087,43 @@ export default e => {
           playSoundSw=true;
           lastPlaySoundAnimationIndex = localPlayer.avatar.useAnimationIndex;
         }
+        
       }
       else{
         playSoundSw=false;
         startAnimationTime=0;
       }
-      if (!(localPlayer.avatar.useAnimationIndex >= 0)) lastPlaySoundAnimationIndex = null;
+      if (!(localPlayer.avatar.useAnimationIndex >= 0)) 
+        lastPlaySoundAnimationIndex = null;
+
+      
+      // handel slash enable
+      if(localPlayer.avatar.useAnimationIndex >= 0){
+        if(startSlashAnimationTime === 0){
+          startSlashAnimationTime = performance.now();
+        }
+        if(
+          startSlashAnimationTime !== 0
+          && performance.now() - startSlashAnimationTime >= slashDelay[localPlayer.avatar.useAnimationCombo[localPlayer.avatar.useAnimationIndex]].start
+          && !playSlash
+        ){
+          playSlash = true;
+          slashEnabled = true;
+          startSlashTime = performance.now();
+          lastAnimation = localPlayer.avatar.useAnimationCombo[localPlayer.avatar.useAnimationIndex];
+          alreadyPlaycollision = false;
+        }
+      }
+      else{
+        slashEnabled = false;
+        playSlash=false;
+        startSlashAnimationTime = 0;
+      }
+      if(startSlashTime!==-1 && performance.now() - startSlashTime > slashDelay[lastAnimation].duration){
+        slashEnabled = false;
+        startSlashTime = -1;
+      }
+      
     }
     /* if (!wearing) {
       if (subApp) {
@@ -720,8 +1139,60 @@ export default e => {
       }
     } */
 
+    
+    // play slash
+    if(slashMesh && localPlayer.avatar){
+      if (slashEnabled){
+        if(slashMesh.material.uniforms.uOpacity.value === 0){
+          const voronoiPowerAttribute = slashMesh.geometry.getAttribute('voronoiPower');
+
+          voronoiPowerAttribute.setX(0, 1.5);
+          voronoiPowerAttribute.setX(1, 4.5);
+          slashMesh.material.uniforms.uOpacity.value = 1;
+          // rotateSpeed = 0.3;
+          slashRotation = Math.PI / 2;
+          
+          voronoiPowerAttribute.needsUpdate = true;
+        }
+        
+      }
+      else{
+        if(slashMesh.material.uniforms.uOpacity.value > 0)
+          slashMesh.material.uniforms.uOpacity.value = 0;
+      }
+      const positionsAttribute = slashMesh.geometry.getAttribute('positions');
+      const voronoiPowerAttribute = slashMesh.geometry.getAttribute('voronoiPower');
+
+      
+      quaternion.setFromAxisAngle(rotYVecator , slashRotation );
+      slashMesh.material.uniforms.slashQuaternion.value.copy(quaternion);
+      slashRotation += 0.05;
+
+      voronoiPowerAttribute.setX(0, voronoiPowerAttribute.getX(0) + 0.5);
+      voronoiPowerAttribute.setX(1, voronoiPowerAttribute.getX(1) + 2.5);
+      
+
+      slashMesh.material.uniforms.uTime.value = timestamp / 1000;
+      positionsAttribute.needsUpdate = true;
+      voronoiPowerAttribute.needsUpdate = true;
+    }
+    // play hit animation
+    if(
+      hitGroup.position.x !== collisionPoint.x
+      && hitGroup.position.y !== collisionPoint.y
+      && hitGroup.position.z !== collisionPoint.z
+    ){
+      hitGroup.position.copy(collisionPoint);
+      hitOffset = 0;
+    }
+    hitGroup.rotation.copy(camera.rotation);
+    playHitAnimation(hitOffset)
+    hitOffset++;
+    hitGroup.updateMatrixWorld();
+
+
     if (trailMesh && subApp) {
-      trailMesh.update(using, subApp.matrixWorld);
+      //trailMesh.update(using, subApp.matrixWorld);
     }
     if (decalMesh) {
       //const localPlayer = useLocalPlayer();
@@ -730,6 +1201,31 @@ export default e => {
       }
 
       decalMesh.pushGeometryUpdate();
+    }
+
+    if(currentDecalNum>0){
+      let currentIndex = decalMesh.offset / positionAttributeLength - 1 >= 0 ? decalMesh.offset / positionAttributeLength - 1 : maxNumDecals*numSegments - 1;
+      currentIndex = currentIndex + 1 >= maxNumDecals * numSegments ? 0 : currentIndex + 1;
+      let i = preIndex+1;
+      while(true){
+        if(i>=maxNumDecals*numSegments)
+          i=0;
+        if(i===currentIndex)
+          break;
+        if(performance.now() - collisionTime[i]>500 && collisionTime[i]!=-1){
+          for(let j = 0; j < positionAttributeLength; j++){
+            decalMesh.geometry.attributes.position.setXYZ(i * positionAttributeLength + j, 0, 0, 0);
+          }
+          collisionTime[i]=-1;
+          currentDecalNum--;
+          preIndex = i;
+        }
+        else{
+          break;
+        }
+        i++;
+      }
+      decalMesh.geometry.attributes.position.needsUpdate = true;
     }
   });
 
