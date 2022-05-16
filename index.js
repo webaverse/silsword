@@ -1045,7 +1045,7 @@ export default e => {
     'swordTopDownSlashStep':150
   }
 
-  let slashDelay={
+  window.slashDelay={
     'swordSideSlash':{start: 500, duration: 50},
     'swordSideSlashStep':{start: 250, duration: 100},
     'swordTopDownSlash':{start: 250, duration: 100},
@@ -1098,7 +1098,7 @@ export default e => {
 
       
       // handel slash enable
-      if(localPlayer.avatar.useAnimationIndex >= 0){
+      if(localPlayer.avatar.useAnimationIndex >= 0 && localPlayer.avatar.useAnimationCombo[localPlayer.avatar.useAnimationIndex] !== lastAnimation){
         if(startSlashAnimationTime === 0){
           startSlashAnimationTime = performance.now();
         }
@@ -1123,6 +1123,7 @@ export default e => {
         slashEnabled = false;
         startSlashTime = -1;
       }
+      if (!(localPlayer.avatar.useAnimationIndex >= 0)) lastAnimation = null;
       
     }
     /* if (!wearing) {
