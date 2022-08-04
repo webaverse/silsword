@@ -129,11 +129,15 @@ export default e => {
         ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
         uniform float uTime;
         varying vec2 vUv;
+        varying vec4 vUv4;
         
         void main() {
           vUv=uv;
-          vUv.y*=1.0;
+          // vUv.y*=1.0;
           //vUv.x=1.-vUv.x;
+
+          vUv4 = vec4(position, 1.0);
+
           vec4 modelPosition = modelMatrix * vec4(position, 1.0);
           vec4 viewPosition = viewMatrix * modelPosition;
           vec4 projectionPosition = projectionMatrix * viewPosition;
@@ -151,6 +155,7 @@ export default e => {
         uniform float uTime;
         uniform float opacity;
         varying vec2 vUv;
+        varying vec4 vUv4;
         void main() {
           vec3 texColorR = texture2D(
             textureR,
@@ -194,7 +199,8 @@ export default e => {
           // gl_FragColor = vec4(0,1,0,1);
           // gl_FragColor = vec4(vUv,0,1);
           // gl_FragColor = vec4(0,vUv.y,0,1);
-          gl_FragColor = texture2D(textureUvGrid, vUv);
+          // gl_FragColor = texture2D(textureUvGrid, vUv);
+          gl_FragColor = texture2DProj(textureUvGrid, vUv4);
           ${THREE.ShaderChunk.logdepthbuf_fragment}
         }
       `,
@@ -210,6 +216,7 @@ export default e => {
     material.freeze();
 
     const plane = new THREE.Mesh(planeGeometry, material);
+    window.trailMesh = plane;
     plane.frustumCulled = false;
     sceneLowPriority.add(plane);
 
