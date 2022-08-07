@@ -83,15 +83,19 @@ export default e => {
   scene.add(backTransformMesh); */
 
 
+  const appDecalMeshes = [];
   let appDecalMesh;
+  const decalMeshMap = new Map();
 
   const decalMeshCleanup = (e) => {
     const destroyingApp = e.target;
-    const destroyingDecalMesh = destroyingApp.decalMesh;
+    const destroyingDecalMesh = decalMeshMap.get(destroyingApp);
     scene.remove(destroyingDecalMesh);
+
     appDecalMesh = _makeDecalMesh();
     scene.add(appDecalMesh);
   };
+
 
   const _makeDecalMesh = () => {
     const geometry = new THREE.BufferGeometry();
@@ -214,15 +218,20 @@ export default e => {
 
             if (decalMesh) {
               const collisionId = result.objectId;
-              const object = getAppByPhysicsId(collisionId);
-              if (object) {
-                if (!object.decalMesh) {
+              const targetApp = getAppByPhysicsId(collisionId);
+              if (targetApp) {
+                const hasTargetApp = decalMeshMap.has(targetApp);
+                if (!hasTargetApp) {
+                  decalMeshMap.set(targetApp, decalMesh);
+                  appDecalMeshes.push(decalMesh);
                   // listening for destroy event on the damaged app + cleaning up the sword decalMesh and trailMesh
-                  object.decalMesh = decalMesh;
-                  object.addEventListener('destroy', decalMeshCleanup);
+                  targetApp.addEventListener('destroy', decalMeshCleanup);
                 }
+
+                appDecalMesh = decalMeshMap.get(targetApp);
               }
             }
+
 
             // if consecutive hits are too far apart, treat them as separate hits
             if (
@@ -551,8 +560,10 @@ export default e => {
 
     return decalMesh;
   };
+
   appDecalMesh = _makeDecalMesh();
   scene.add(appDecalMesh);
+
   class TrailMesh extends THREE.Mesh {
     constructor(a, b) {
       const numPositions = 256;
@@ -875,6 +886,15 @@ export default e => {
   });
 
   useCleanup(() => {
+    for (const [targetApp, decalMesh] of decalMeshMap.entries()) {
+      targetApp.removeEventListener('destroy', decalMeshCleanup);
+      scene.remove(decalMesh);
+      decalMeshMap.delete(targetApp);
+    }
+    for (const decalMesh of appDecalMeshes) {
+      scene.remove(decalMesh);
+    }
+    appDecalMesh && scene.remove(appDecalMesh);
     trailMesh && sceneLowPriority.remove(trailMesh);
     subApp && subApp.destroy();
   });
