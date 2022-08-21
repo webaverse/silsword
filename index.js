@@ -673,52 +673,8 @@ export default e => {
     using = e.use;
   });
 
-  let animationOffset={
-    'swordSideSlash':350,
-    'swordSideSlashStep':150,
-    'swordTopDownSlash':100,
-    'swordTopDownSlashStep':150
-  }
-  let startAnimationTime=0;
-  let playSoundSw=false;
-  let lastPlaySoundAnimationIndex = null;
   useFrame(() => {
     const localPlayer = useLocalPlayer();
-    if(localPlayer.avatar && wearing){
-      if(localPlayer.avatar.useAnimationIndex >= 0 && localPlayer.avatar.useAnimationIndex !== lastPlaySoundAnimationIndex){
-        if(startAnimationTime===0){
-          startAnimationTime=performance.now();
-        }
-        if(
-          performance.now()-startAnimationTime>=animationOffset[localPlayer.avatar.useAnimationCombo[localPlayer.avatar.useAnimationIndex]]
-          && !playSoundSw
-        ){
-          const indexOfSlash=localPlayer.avatar.useAnimationIndex;
-          sounds.playSound(soundFiles.combat[soundIndex+(4*indexOfSlash+Math.floor(Math.random()*4))]);
-          localPlayer.characterSfx.playGrunt('attack');
-          playSoundSw=true;
-          lastPlaySoundAnimationIndex = localPlayer.avatar.useAnimationIndex;
-        }
-      }
-      else{
-        playSoundSw=false;
-        startAnimationTime=0;
-      }
-      if (!(localPlayer.avatar.useAnimationIndex >= 0)) lastPlaySoundAnimationIndex = null;
-    }
-    /* if (!wearing) {
-      if (subApp) {
-        subApp.position.copy(app.position);
-        subApp.quaternion.copy(app.quaternion);
-        subApp.updateMatrixWorld();
-      }
-    } else {
-      if (subApp) {
-        app.position.copy(subApp.position);
-        app.quaternion.copy(subApp.quaternion);
-        app.updateMatrixWorld();
-      }
-    } */
 
     if (trailMesh && subApp) {
       trailMesh.update(using, subApp.matrixWorld);
