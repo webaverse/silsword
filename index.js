@@ -46,7 +46,7 @@ export default e => {
 
   const sounds = useSound();
   const soundFiles = sounds.getSoundFiles();
-  const soundIndex=soundFiles.combat.map(sound => sound.name).indexOf('combat/sword_slash0-1.wav');
+  const swordSoundIndex = soundFiles.combat.map(sound => sound.name).indexOf('combat/sword_slash0-1.wav');
 
   const {components} = app;
 
@@ -672,10 +672,15 @@ export default e => {
   useUse(e => {
     using = e.use;
   });
-
+  const localPlayer = useLocalPlayer();
+  const comboSoundEmit = (e) =>{
+    if(e.data.indexOfCombo === localPlayer.avatar.useAnimationIndex){
+      sounds.playSound(soundFiles.combat[swordSoundIndex + (4 * e.data.indexOfCombo + Math.floor(Math.random() * 4))]);
+    }
+  }
+  localPlayer.characterSfx.addEventListener('comboSoundEmit', comboSoundEmit);
   useFrame(() => {
-    const localPlayer = useLocalPlayer();
-
+    
     if (trailMesh && subApp) {
       trailMesh.update(using, subApp.matrixWorld);
     }
