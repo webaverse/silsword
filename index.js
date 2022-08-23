@@ -673,12 +673,12 @@ export default e => {
     using = e.use;
   });
   const localPlayer = useLocalPlayer();
-  const comboSoundEmit = (e) =>{
+  const meleewhoosh = (e) =>{
     if(e.data.indexOfCombo === localPlayer.avatar.useAnimationIndex){
       sounds.playSound(soundFiles.combat[swordSoundIndex + (4 * e.data.indexOfCombo + Math.floor(Math.random() * 4))]);
     }
   }
-  localPlayer.characterSfx.addEventListener('comboSoundEmit', comboSoundEmit);
+  localPlayer.characterSfx.addEventListener('meleewhoosh', meleewhoosh);
   useFrame(() => {
     
     if (trailMesh && subApp) {
