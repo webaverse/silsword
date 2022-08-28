@@ -46,7 +46,6 @@ export default e => {
 
   const sounds = useSound();
   const soundFiles = sounds.getSoundFiles();
-  const swordSoundIndex = soundFiles.combat.map(sound => sound.name).indexOf('combat/sword_slash0-1.wav');
 
   const {components} = app;
 
@@ -674,8 +673,8 @@ export default e => {
   });
   const localPlayer = useLocalPlayer();
   const meleewhoosh = (e) =>{
-    if(e.data.indexOfCombo === localPlayer.avatar.useAnimationIndex){
-      sounds.playSound(soundFiles.combat[swordSoundIndex + (4 * e.data.indexOfCombo + Math.floor(Math.random() * 4))]);
+    if(using){
+      sounds.playSound(soundFiles.meleewhoosh[e.data.index]);
     }
   }
   localPlayer.characterSfx.addEventListener('meleewhoosh', meleewhoosh);
