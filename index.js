@@ -621,9 +621,9 @@ export default e => {
   let subApp = null;
   e.waitUntil((async () => {
     let u2 = baseUrl + 'megasword_v4_texta.glb';
-    if (/^https?:/.test(u2)) {
+    /* if (/^https?:/.test(u2)) {
       u2 = '/@proxy/' + u2;
-    }
+    } */
     const m = await metaversefile.import(u2);
 
     subApp = metaversefile.createApp({
