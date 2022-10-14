@@ -647,6 +647,7 @@ export default e => {
     const _loadDecal = async () => {
       const src = baseUrl + 'chevron2.svg';
       const res = await fetch(src);
+      console.log('silsword load base url', {baseUrl, src, res});
       const blob = await res.blob();
       const imageBitmap = await createImageBitmap(blob);
       decalTexture.image = imageBitmap;
