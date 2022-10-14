@@ -61,12 +61,12 @@ export default e => {
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
   
-  const texture = new THREE.TextureLoader().load(baseUrl + 'chevron2.svg');
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
+  const decalTexture = new THREE.Texture();
+  decalTexture.wrapS = THREE.RepeatWrapping;
+  decalTexture.wrapT = THREE.RepeatWrapping;
   const decalMaterial = new THREE.MeshBasicMaterial({
     color: 0xFF0000,
-    map: texture,
+    map: decalTexture,
     side: THREE.DoubleSide,
     // transparent: true,
   });
@@ -620,28 +620,42 @@ export default e => {
 
   let subApp = null;
   e.waitUntil((async () => {
-    let u2 = baseUrl + 'megasword_v4_texta.glb';
-    /* if (/^https?:/.test(u2)) {
-      u2 = '/@proxy/' + u2;
-    } */
-    const m = await metaversefile.import(u2);
+    const _loadModel = async () => {
+      let u2 = baseUrl + 'megasword_v4_texta.glb';
+      /* if (/^https?:/.test(u2)) {
+        u2 = '/@proxy/' + u2;
+      } */
+      const m = await metaversefile.import(u2);
 
-    subApp = metaversefile.createApp({
-      name: u2,
-    });
-    subApp.name = 'silsword mesh';
-    /* subApp.position.copy(app.position);
-    subApp.quaternion.copy(app.quaternion);
-    subApp.scale.copy(app.scale); */
-    app.add(subApp);
-    subApp.updateMatrixWorld();
-    subApp.contentId = u2;
-    subApp.instanceId = app.instanceId;
+      subApp = metaversefile.createApp({
+        name: u2,
+      });
+      subApp.name = 'silsword mesh';
+      /* subApp.position.copy(app.position);
+      subApp.quaternion.copy(app.quaternion);
+      subApp.scale.copy(app.scale); */
+      app.add(subApp);
+      subApp.updateMatrixWorld();
+      subApp.contentId = u2;
+      subApp.instanceId = app.instanceId;
 
-    for (const {key, value} of components) {
-      subApp.setComponent(key, value);
-    }
-    await subApp.addModule(m);
+      for (const {key, value} of components) {
+        subApp.setComponent(key, value);
+      }
+      await subApp.addModule(m);
+    };
+    const _loadDecal = async () => {
+      const src = baseUrl + 'chevron2.svg';
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const imageBitmap = await createImageBitmap(blob);
+      decalTexture.image = imageBitmap;
+      decalTexture.needsUpdate = true;
+    };
+    await Promise.all([
+      _loadModel(),
+      _loadDecal(),
+    ]);
   })());
 
   /* useActivate(() => {
