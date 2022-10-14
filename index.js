@@ -645,9 +645,8 @@ export default e => {
       await subApp.addModule(m);
     };
     const _loadDecal = async () => {
-      const src = baseUrl + 'chevron2.svg';
+      const src = baseUrl + 'chevron2.png';
       const res = await fetch(src);
-      console.log('silsword load base url', {baseUrl, src, res});
       const blob = await res.blob();
       const imageBitmap = await createImageBitmap(blob);
       decalTexture.image = imageBitmap;
