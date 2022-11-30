@@ -82,6 +82,23 @@ export default e => {
   const backTransformMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: 0x0000ff}));
   scene.add(backTransformMesh); */
 
+
+  const appDecalMeshes = [];
+  let appDecalMesh;
+  let lastDecalMesh;
+  const decalMeshMap = new Map();
+
+  const decalMeshCleanup = (e) => {
+    const destroyingApp = e.target;
+    const destroyingDecalMesh = decalMeshMap.get(destroyingApp);
+    scene.remove(destroyingDecalMesh);
+    // scene.remove(appDecalMesh);
+
+    appDecalMesh = _makeDecalMesh();
+    scene.add(appDecalMesh);
+  };
+
+
   const _makeDecalMesh = () => {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(planeGeometry.attributes.position.array.length * numSegments * maxNumDecals);
@@ -104,6 +121,7 @@ export default e => {
     let lastHitPoint = null;
     const width = 0.2;
     const thickness = 0.05;
+
     decalMesh.update = (using, matrixWorldSword, matrixWorldShoulder) => {
       const _getCurrentSwordTransform = swordTransform => {
         matrixWorldSword.decompose(localVector, localQuaternion, localVector2);
@@ -176,6 +194,26 @@ export default e => {
               hitMesh.updateMatrixWorld();
               scene.add(hitMesh);
             // } */
+
+              const collisionId = result.objectId;
+              const targetApp = getAppByPhysicsId(collisionId);
+              if (targetApp) {
+                const hasTargetApp = decalMeshMap.has(targetApp);
+                if (!hasTargetApp) {
+                  decalMeshMap.set(targetApp, appDecalMesh);
+                  appDecalMeshes.push(appDecalMesh);
+                  lastDecalMesh = appDecalMesh;
+
+                  appDecalMesh = _makeDecalMesh();
+                  scene.add(appDecalMesh);
+
+                  // listening for destroy event on the damaged app + cleaning up the sword decalMesh and trailMesh
+                  targetApp.addEventListener('destroy', decalMeshCleanup);
+                }
+              }
+
+
+
 
             // if consecutive hits are too far apart, treat them as separate hits
             if (lastHitPoint && hitPoint.distanceTo(lastHitPoint.hitPoint) > 0.2) {
@@ -411,8 +449,11 @@ export default e => {
 
     return decalMesh;
   };
-  const decalMesh = _makeDecalMesh();
-  scene.add(decalMesh);
+
+  appDecalMesh = _makeDecalMesh();
+  scene.add(appDecalMesh);
+  lastDecalMesh = appDecalMesh;
+
   class TrailMesh extends THREE.Mesh {
     constructor(a, b) {
       const numPositions = 256;
@@ -693,19 +734,27 @@ export default e => {
     if (trailMesh && subApp) {
       trailMesh.update(using, subApp.matrixWorld);
     }
-    if (decalMesh) {
+    if (lastDecalMesh) {
       //const localPlayer = useLocalPlayer();
       if (subApp && localPlayer.avatar) {
-        decalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
+        lastDecalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
       }
 
-      decalMesh.pushGeometryUpdate();
+      lastDecalMesh.pushGeometryUpdate();
     }
   });
 
   useCleanup(() => {
+    for (const [targetApp, decalMesh] of decalMeshMap.entries()) {
+      targetApp.removeEventListener('destroy', decalMeshCleanup);
+      scene.remove(decalMesh);
+      decalMeshMap.delete(targetApp);
+    }
+    for (const decalMesh of appDecalMeshes) {
+      scene.remove(decalMesh);
+    }
+    appDecalMesh && scene.remove(appDecalMesh);
     trailMesh && sceneLowPriority.remove(trailMesh);
-    decalMesh && scene.remove(decalMesh);
     subApp && subApp.destroy();
   });
 
