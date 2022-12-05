@@ -608,15 +608,15 @@ export default e => {
       this.material.uniforms.uTime.needsUpdate = true;
     }
   }
-  let trailMesh = null;
-  const useComponent = components.find(component => component.key === 'use');
-  const trail = useComponent?.value.trail;
-  if (Array.isArray(trail)) {
-    const a = new THREE.Vector3().fromArray(trail[0]);
-    const b = new THREE.Vector3().fromArray(trail[1]);
-    trailMesh = new TrailMesh(a, b);
-    sceneLowPriority.add(trailMesh);
-  }
+  // let trailMesh = null;
+  // const useComponent = components.find(component => component.key === 'use');
+  // const trail = useComponent?.value.trail;
+  // if (Array.isArray(trail)) {
+  //   const a = new THREE.Vector3().fromArray(trail[0]);
+  //   const b = new THREE.Vector3().fromArray(trail[1]);
+  //   trailMesh = new TrailMesh(a, b);
+  //   sceneLowPriority.add(trailMesh);
+  // }
 
   let subApp = null;
   e.waitUntil((async () => {
@@ -690,9 +690,9 @@ export default e => {
   useFrame(() => {
     const localPlayer = useLocalPlayer();
 
-    if (trailMesh && subApp) {
-      trailMesh.update(using, subApp.matrixWorld);
-    }
+    // if (trailMesh && subApp) {
+    //   trailMesh.update(using, subApp.matrixWorld);
+    // }
     if (decalMesh) {
       //const localPlayer = useLocalPlayer();
       if (subApp && localPlayer.avatar) {
@@ -704,7 +704,7 @@ export default e => {
   });
 
   useCleanup(() => {
-    trailMesh && sceneLowPriority.remove(trailMesh);
+    // trailMesh && sceneLowPriority.remove(trailMesh);
     decalMesh && scene.remove(decalMesh);
     subApp && subApp.destroy();
   });
