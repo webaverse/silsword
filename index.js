@@ -411,8 +411,8 @@ export default e => {
 
     return decalMesh;
   };
-  const decalMesh = _makeDecalMesh();
-  scene.add(decalMesh);
+  // const decalMesh = _makeDecalMesh();
+  // scene.add(decalMesh);
   class TrailMesh extends THREE.Mesh {
     constructor(a, b) {
       const numPositions = 256;
@@ -608,15 +608,15 @@ export default e => {
       this.material.uniforms.uTime.needsUpdate = true;
     }
   }
-  // let trailMesh = null;
-  // const useComponent = components.find(component => component.key === 'use');
-  // const trail = useComponent?.value.trail;
-  // if (Array.isArray(trail)) {
-  //   const a = new THREE.Vector3().fromArray(trail[0]);
-  //   const b = new THREE.Vector3().fromArray(trail[1]);
-  //   trailMesh = new TrailMesh(a, b);
-  //   sceneLowPriority.add(trailMesh);
-  // }
+  let trailMesh = null;
+  const useComponent = components.find(component => component.key === 'use');
+  const trail = useComponent?.value.trail;
+  if (Array.isArray(trail)) {
+    const a = new THREE.Vector3().fromArray(trail[0]);
+    const b = new THREE.Vector3().fromArray(trail[1]);
+    trailMesh = new TrailMesh(a, b);
+    sceneLowPriority.add(trailMesh);
+  }
 
   let subApp = null;
   e.waitUntil((async () => {
@@ -690,22 +690,22 @@ export default e => {
   useFrame(() => {
     const localPlayer = useLocalPlayer();
 
-    // if (trailMesh && subApp) {
-    //   trailMesh.update(using, subApp.matrixWorld);
-    // }
-    if (decalMesh) {
-      //const localPlayer = useLocalPlayer();
-      if (subApp && localPlayer.avatar) {
-        decalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
-      }
-
-      decalMesh.pushGeometryUpdate();
+    if (trailMesh && subApp) {
+      trailMesh.update(using, subApp.matrixWorld);
     }
+    // if (decalMesh) {
+    //   //const localPlayer = useLocalPlayer();
+    //   if (subApp && localPlayer.avatar) {
+    //     decalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
+    //   }
+
+    //   decalMesh.pushGeometryUpdate();
+    // }
   });
 
   useCleanup(() => {
-    // trailMesh && sceneLowPriority.remove(trailMesh);
-    decalMesh && scene.remove(decalMesh);
+    trailMesh && sceneLowPriority.remove(trailMesh);
+    // decalMesh && scene.remove(decalMesh);
     subApp && subApp.destroy();
   });
 
