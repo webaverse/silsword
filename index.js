@@ -411,8 +411,8 @@ export default e => {
 
     return decalMesh;
   };
-  const decalMesh = _makeDecalMesh();
-  scene.add(decalMesh);
+  // const decalMesh = _makeDecalMesh();
+  // scene.add(decalMesh);
   class TrailMesh extends THREE.Mesh {
     constructor(a, b) {
       const numPositions = 256;
@@ -693,19 +693,19 @@ export default e => {
     if (trailMesh && subApp) {
       trailMesh.update(using, subApp.matrixWorld);
     }
-    if (decalMesh) {
-      //const localPlayer = useLocalPlayer();
-      if (subApp && localPlayer.avatar) {
-        decalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
-      }
+    // if (decalMesh) {
+    //   //const localPlayer = useLocalPlayer();
+    //   if (subApp && localPlayer.avatar) {
+    //     decalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
+    //   }
 
-      decalMesh.pushGeometryUpdate();
-    }
+    //   decalMesh.pushGeometryUpdate();
+    // }
   });
 
   useCleanup(() => {
     trailMesh && sceneLowPriority.remove(trailMesh);
-    decalMesh && scene.remove(decalMesh);
+    // decalMesh && scene.remove(decalMesh);
     subApp && subApp.destroy();
   });
 
